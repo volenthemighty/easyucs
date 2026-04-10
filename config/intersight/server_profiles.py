@@ -32,6 +32,7 @@ from config.intersight.server_policies import (
     IntersightMemoryPolicy,
     IntersightNetworkConnectivityPolicy,
     IntersightNtpPolicy,
+    IntersightPcieConnectivityPolicy,
     IntersightPersistentMemoryPolicy,
     IntersightPowerPolicy,
     IntersightSanConnectivityPolicy,
@@ -66,6 +67,7 @@ class IntersightGenericUcsServerProfile(IntersightConfigObject):
         "memory_policy": IntersightMemoryPolicy,
         "network_connectivity_policy": IntersightNetworkConnectivityPolicy,
         "ntp_policy": IntersightNtpPolicy,
+        "pcie_connectivity_policy": IntersightPcieConnectivityPolicy,
         "persistent_memory_policy": IntersightPersistentMemoryPolicy,
         "power_policy": IntersightPowerPolicy,
         "resource_pool": IntersightResourcePool,
@@ -138,6 +140,7 @@ class IntersightGenericUcsServerProfile(IntersightConfigObject):
         self.memory_policy = None
         self.network_connectivity_policy = None
         self.ntp_policy = None
+        self.pcie_connectivity_policy = None
         self.persistent_memory_policy = None
         self.power_policy = None
         self.san_connectivity_policy = None
@@ -194,6 +197,9 @@ class IntersightUcsServerProfile(IntersightGenericUcsServerProfile):
         if self._config.load_from == "live":
             if self.target_platform == "FIAttached":
                 self.target_platform = "FI-Attached"
+
+            if self.target_platform == "UnifiedEdgeServer":
+                self.target_platform = "Unified Edge"
 
             # If this UCS Server Profile is derived from a UCS Server Profile Template, we only get the source template
             if hasattr(self._object, "src_template"):
@@ -352,12 +358,12 @@ class IntersightUcsServerProfile(IntersightGenericUcsServerProfile):
                 "adapter_configuration_policy", "assigned_server", "bios_policy", "boot_policy",
                 "certificate_management_policy", "device_connector_policy", "drive_security_policy", "firmware_policy",
                 "imc_access_policy", "ipmi_over_lan_policy", "lan_connectivity_policy", "ldap_policy",
-                "local_user_policy", "memory_policy", "network_connectivity_policy", "ntp_policy", "operational_state",
-                "persistent_memory_policy", "power_policy", "reservations", "resource_pool", "san_connectivity_policy",
-                "scrub_policy", "sd_card_policy", "serial_over_lan_policy", "server_pre_assign_by_serial",
-                "server_pre_assign_by_slot", "smtp_policy", "snmp_policy", "ssh_policy", "storage_policy",
-                "syslog_policy", "thermal_policy", "ucs_server_profile_template", "uuid_allocation_type", "uuid_pool",
-                "uuid_static", "virtual_kvm_policy", "virtual_media_policy"
+                "local_user_policy", "memory_policy", "network_connectivity_policy", "ntp_policy",
+                "operational_state", "pcie_connectivity_policy", "persistent_memory_policy", "power_policy",
+                "reservations", "resource_pool", "san_connectivity_policy", "scrub_policy", "sd_card_policy",
+                "serial_over_lan_policy", "server_pre_assign_by_serial", "server_pre_assign_by_slot", "smtp_policy",
+                "snmp_policy", "ssh_policy", "storage_policy", "syslog_policy", "thermal_policy", "ucs_server_profile_template",
+                "uuid_allocation_type", "uuid_pool", "uuid_static", "virtual_kvm_policy", "virtual_media_policy"
             ]:
                 setattr(self, attribute, None)
                 if attribute in self._object:
@@ -1105,6 +1111,8 @@ class IntersightUcsServerProfile(IntersightGenericUcsServerProfile):
         if self.target_platform is not None:
             if self.target_platform in ["FI-Attached"]:
                 kwargs["target_platform"] = "FIAttached"
+            elif self.target_platform == "Unified Edge":
+                kwargs["target_platform"] = "UnifiedEdgeServer"
             else:
                 kwargs["target_platform"] = self.target_platform
 
@@ -1426,10 +1434,10 @@ class IntersightUcsServerProfile(IntersightGenericUcsServerProfile):
             "adapter_configuration_policy", "bios_policy", "boot_policy", "certificate_management_policy",
             "device_connector_policy", "drive_security_policy", "firmware_policy", "imc_access_policy",
             "ipmi_over_lan_policy", "lan_connectivity_policy", "ldap_policy", "local_user_policy", "memory_policy",
-            "network_connectivity_policy", "ntp_policy", "persistent_memory_policy", "power_policy",
-            "san_connectivity_policy", "scrub_policy", "sd_card_policy", "serial_over_lan_policy", "smtp_policy",
-            "snmp_policy", "ssh_policy", "storage_policy", "syslog_policy", "thermal_policy", "virtual_kvm_policy",
-            "virtual_media_policy"
+            "network_connectivity_policy", "ntp_policy", "pcie_connectivity_policy", "persistent_memory_policy",
+            "power_policy", "san_connectivity_policy", "scrub_policy", "sd_card_policy", "serial_over_lan_policy",
+            "smtp_policy", "snmp_policy", "ssh_policy", "storage_policy", "syslog_policy", "thermal_policy",
+            "virtual_kvm_policy", "virtual_media_policy"
         ]:
             if getattr(self, policy_name, None) is not None:
                 policy_type = self._POLICY_MAPPING_TABLE.get(policy_name)
@@ -1481,6 +1489,9 @@ class IntersightUcsServerProfileTemplate(IntersightGenericUcsServerProfile):
             if self.target_platform == "FIAttached":
                 self.target_platform = "FI-Attached"
 
+            if self.target_platform == "UnifiedEdgeServer":
+                self.target_platform = "Unified Edge"
+
             if hasattr(server_profile_template, "uuid_pool"):  # This line is needed until IS Appliance is updated
                 if server_profile_template.uuid_pool:
                     uuid_pool = self._get_policy_name(policy=server_profile_template.uuid_pool)
@@ -1498,9 +1509,9 @@ class IntersightUcsServerProfileTemplate(IntersightGenericUcsServerProfile):
                 "adapter_configuration_policy", "bios_policy", "boot_policy", "certificate_management_policy",
                 "device_connector_policy", "drive_security_policy", "firmware_policy", "imc_access_policy",
                 "ipmi_over_lan_policy", "lan_connectivity_policy", "ldap_policy", "local_user_policy", "memory_policy",
-                "network_connectivity_policy", "ntp_policy", "persistent_memory_policy", "power_policy",
-                "san_connectivity_policy", "scrub_policy", "sd_card_policy", "serial_over_lan_policy", "smtp_policy",
-                "snmp_policy", "ssh_policy", "storage_policy", "syslog_policy", "thermal_policy", "uuid_pool",
+                "network_connectivity_policy", "ntp_policy", "pcie_connectivity_policy", "persistent_memory_policy",
+                "power_policy", "san_connectivity_policy", "scrub_policy", "sd_card_policy", "serial_over_lan_policy",
+                "smtp_policy", "snmp_policy", "ssh_policy", "storage_policy", "syslog_policy", "thermal_policy", "uuid_pool",
                 "virtual_kvm_policy", "virtual_media_policy"
             ]:
                 setattr(self, attribute, None)
@@ -1532,6 +1543,8 @@ class IntersightUcsServerProfileTemplate(IntersightGenericUcsServerProfile):
         if self.target_platform is not None:
             if self.target_platform in ["FI-Attached"]:
                 kwargs["target_platform"] = "FIAttached"
+            elif self.target_platform == "Unified Edge":
+                kwargs["target_platform"] = "UnifiedEdgeServer"
             else:
                 kwargs["target_platform"] = self.target_platform
 
@@ -1552,10 +1565,10 @@ class IntersightUcsServerProfileTemplate(IntersightGenericUcsServerProfile):
             "adapter_configuration_policy", "bios_policy", "boot_policy", "certificate_management_policy",
             "device_connector_policy", "drive_security_policy", "firmware_policy", "imc_access_policy",
             "ipmi_over_lan_policy", "lan_connectivity_policy", "ldap_policy", "local_user_policy", "memory_policy",
-            "network_connectivity_policy", "ntp_policy", "persistent_memory_policy", "power_policy",
-            "san_connectivity_policy", "scrub_policy", "sd_card_policy", "serial_over_lan_policy", "smtp_policy",
-            "snmp_policy", "ssh_policy", "storage_policy", "syslog_policy", "thermal_policy", "virtual_kvm_policy",
-            "virtual_media_policy"
+            "network_connectivity_policy", "ntp_policy", "pcie_connectivity_policy", "persistent_memory_policy",
+            "power_policy", "san_connectivity_policy", "scrub_policy", "sd_card_policy", "serial_over_lan_policy",
+            "smtp_policy", "snmp_policy", "ssh_policy", "storage_policy", "syslog_policy", "thermal_policy",
+            "virtual_kvm_policy", "virtual_media_policy"
         ]:
             if getattr(self, policy_name, None) is not None:
                 policy_type = self._POLICY_MAPPING_TABLE.get(policy_name)

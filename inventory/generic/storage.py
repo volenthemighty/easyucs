@@ -86,9 +86,9 @@ class GenericStorageLocalDisk(GenericInventoryObject):
             self.link_speed = float(2.5)
         elif self.link_speed in ["5", "5-gtps"]:
             self.link_speed = float(5)
-        elif self.link_speed in ["8", "8-gtps"]:
+        elif self.link_speed in ["8", "8-gtps", "63.02"]:  # 63.02 / 8 = 7.877GT/s
             self.link_speed = float(8)
-        elif self.link_speed in ["16", "16-gtps"]:
+        elif self.link_speed in ["16", "16-gtps", "126.03"]:  # 126.03 / 8 = 15.754GT/s
             self.link_speed = float(16)
 
     def _format_rotational_speed_marketing(self):
@@ -136,6 +136,7 @@ class GenericStorageLocalDisk(GenericInventoryObject):
         }
         # Adjustment table specific for SSD sizes
         ssd_size_adjustment_table = {
+            "915GB": "960GB",
             "1.8TB": "1.9TB",
         }
         if self.size_marketing in size_adjustment_table.keys():

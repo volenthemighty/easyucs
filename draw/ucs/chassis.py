@@ -90,7 +90,7 @@ class UcsChassisDrawFront(GenericUcsDrawEquipment):
                         used_slot.append(int(slot.slot_id) + 1)
                     if slot.scaled_mode == "single":
                         used_slot.append(int(slot.slot_id) + 1)
-                if getattr(slot, "sku", "") in ["UCSX-410C-M7"]:
+                if getattr(slot, "sku", "") in ["UCSX-410C-M7", "UCSX-410C-M8"]:
                     # We handle the specific case of compute nodes taking 2 slots in the 9508 chassis
                     used_slot.append(int(slot.slot_id) + 1)
                 used_slot.append(int(slot.slot_id))

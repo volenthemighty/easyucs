@@ -4006,9 +4006,9 @@ class UcsSystemIscsiAdapterPolicy(UcsSystemConfigObject):
                                 self.connection_timeout = adapt.connection_time_out
                                 self.lun_busy_retry_count = adapt.lun_busy_retry_count
                                 self.dhcp_timeout = adapt.dhcp_time_out
-                                self.enable_tcp_timestamp = adapt.tcp_time_stamp
-                                self.hba_mode = adapt.hba_mode
-                                self.boot_to_target = adapt.boot_to_target
+                                self.enable_tcp_timestamp = getattr(adapt, "tcp_time_stamp", None)
+                                self.hba_mode = getattr(adapt, "hba_mode", None)
+                                self.boot_to_target = getattr(adapt, "boot_to_target", None)
                                 break
 
         elif self._config.load_from == "file":
@@ -4034,12 +4034,38 @@ class UcsSystemIscsiAdapterPolicy(UcsSystemConfigObject):
             return False
 
         mo_adaptor_host_iscsi_if_profile = AdaptorHostIscsiIfProfile(parent_mo_or_dn=parent_mo, name=self.name)
-        AdaptorProtocolProfile(parent_mo_or_dn=mo_adaptor_host_iscsi_if_profile,
-                               connection_time_out=self.connection_timeout,
-                               lun_busy_retry_count=self.lun_busy_retry_count, dhcp_time_out=self.dhcp_timeout,
-                               tcp_time_stamp=self.enable_tcp_timestamp, hba_mode=self.hba_mode,
-                               boot_to_target=self.boot_to_target)
+        adaptor_protocol_profile_kwargs = {
+            "parent_mo_or_dn": mo_adaptor_host_iscsi_if_profile,
+            "connection_time_out": self.connection_timeout,
+            "lun_busy_retry_count": self.lun_busy_retry_count,
+            "dhcp_time_out": self.dhcp_timeout
+        }
+        # ucsmsdk 0.9.25 removed support for some properties. We need to handle them specifically
+        # depending on the ucsmsdk version in use.
+        supported_props = AdaptorProtocolProfile.prop_map.values()
 
+        if self.enable_tcp_timestamp is not None:
+            if "tcp_time_stamp" in supported_props:
+                adaptor_protocol_profile_kwargs["tcp_time_stamp"] = self.enable_tcp_timestamp
+            else:
+                self.logger(level="warning",
+                            message="tcp_time_stamp is deprecated and will be ignored")
+
+        if self.hba_mode is not None:
+            if "hba_mode" in supported_props:
+                adaptor_protocol_profile_kwargs["hba_mode"] = self.hba_mode
+            else:
+                self.logger(level="warning",
+                            message="hba_mode is deprecated and will be ignored")
+
+        if self.boot_to_target is not None:
+            if "boot_to_target" in supported_props:
+                adaptor_protocol_profile_kwargs["boot_to_target"] = self.boot_to_target
+            else:
+                self.logger(level="warning",
+                            message="boot_to_target is deprecated and will be ignored")
+
+        AdaptorProtocolProfile(**adaptor_protocol_profile_kwargs)
         self._handle.add_mo(mo=mo_adaptor_host_iscsi_if_profile, modify_present=True)
         if commit:
             if self.commit(detail=self.name) != True:

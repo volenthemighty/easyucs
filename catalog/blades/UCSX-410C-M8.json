@@ -1,0 +1,57 @@
+{
+   "model_short_name": "X410c M8",
+   "front_file_name": "UCSX-410C-M8.png",
+   "front_file_size": [579,1755],
+   "front_mezzanine_slots": [
+      {
+         "id": 1,
+         "coord": [0,40],
+         "size": [226,1681]
+      }
+   ],
+   "front_mezzanine_models": [
+      {
+         "name": "UCSX-X10C-FMBK",
+         "type": "blank",
+         "description": "Blanking Panel"
+      }
+   ],
+   "imm_compatible": true,
+   "imm_min_required_version": "6.0(2a)",
+   "spec_sheet_url": "https://www.cisco.com/c/dam/en/us/products/collateral/servers-unified-computing/ucs-x-series-modular-system/x410cm8-specsheet.pdf",
+   "data_sheet_url": "https://www.cisco.com/c/en/us/products/collateral/servers-unified-computing/ucs-x-series-modular-system/ucs-x410c-m8-compute-node-ds.html",
+   "specs": {
+      "form_factor": "2-slot",
+      "chipset": null,
+      "cpu": {
+         "sockets": 4,
+         "family_name": {
+            "granite_rapids": "Intel Xeon 6"
+         }
+      },
+      "memory": {
+         "dimm_type": "DDR5",
+         "dimm_slots": 32,
+         "max_speed": 8000,
+         "max_capacity": 16777216,
+         "dcpmm_support": false
+      },
+      "dimensions": {
+         "centimeters": {
+            "height": 93.22,
+            "width": 28.65,
+            "depth": 60.45
+         },
+         "inches": {
+            "height": 3.67,
+            "width": 11.28,
+            "depth": 23.8
+         },
+         "rack_units": 0
+      },
+      "weight": {
+         "lb": 42,
+         "kg": 19.05
+      }
+   }
+}

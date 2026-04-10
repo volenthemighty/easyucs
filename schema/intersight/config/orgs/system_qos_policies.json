@@ -23,6 +23,15 @@
          "default": "",
          "pattern": "^[a-zA-Z0-9_.:-]{1,64}$"
       },
+      "target_platform": {
+         "description": "System QoS Policy Target Platform",
+         "type": "string",
+         "default": "UCS Domain",
+         "enum": [
+            "UCS Domain",
+            "Unified Edge"
+         ]
+      },
       "tags": {
          "description": "System QoS Policy Tags",
          "type": "array",

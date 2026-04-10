@@ -69,6 +69,16 @@
          },
          "minItems": 1
       },
+      "auditd_policies": {
+         "description": "EasyUCS config/orgs/auditd_policies section",
+         "type": "array",
+         "items": {
+            "description:": "EasyUCS config/orgs/auditd_policies element",
+            "type": "object",
+            "$ref": "orgs/auditd_policies.json"
+         },
+         "minItems": 1
+      },
       "bios_policies": {
          "description": "EasyUCS config/orgs/bios_policies section",
          "type": "array",
@@ -226,6 +236,16 @@
             "description:": "EasyUCS config/orgs/flow_control_policies element",
             "type": "object",
             "$ref": "orgs/flow_control_policies.json"
+         },
+         "minItems": 1
+      },
+      "id_mapping_policies": {
+         "description": "EasyUCS config/orgs/id_mapping_policies section",
+         "type": "array",
+         "items": {
+            "description:": "EasyUCS config/orgs/id_mapping_policies element",
+            "type": "object",
+            "$ref": "orgs/id_mapping_policies.json"
          },
          "minItems": 1
       },
@@ -406,6 +426,16 @@
             "description:": "EasyUCS config/orgs/ntp_policies element",
             "type": "object",
             "$ref": "orgs/ntp_policies.json"
+         },
+         "minItems": 1
+      },
+      "pcie_connectivity_policies": {
+         "description": "EasyUCS config/orgs/pcie_connectivity_policies section",
+         "type": "array",
+         "items": {
+            "description:": "EasyUCS config/orgs/pcie_connectivity_policies element",
+            "type": "object",
+            "$ref": "orgs/pcie_connectivity_policies.json"
          },
          "minItems": 1
       },
@@ -646,6 +676,26 @@
             "description:": "EasyUCS config/orgs/ucs_server_profile_templates element",
             "type": "object",
             "$ref": "orgs/ucs_server_profile_templates.json"
+         },
+         "minItems": 1
+      },
+      "unified_edge_profile_templates": {
+         "description": "EasyUCS config/orgs/unified_edge_profile_templates section",
+         "type": "array",
+         "items": {
+            "description:": "EasyUCS config/orgs/unified_edge_profile_templates element",
+            "type": "object",
+            "$ref": "orgs/unified_edge_profile_templates.json"
+         },
+         "minItems": 1
+      },
+      "unified_edge_profiles": {
+         "description": "EasyUCS config/orgs/unified_edge_profiles section",
+         "type": "array",
+         "items": {
+            "description:": "EasyUCS config/orgs/unified_edge_profiles element",
+            "type": "object",
+            "$ref": "orgs/unified_edge_profiles.json"
          },
          "minItems": 1
       },

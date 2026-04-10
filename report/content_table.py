@@ -51,7 +51,7 @@ def wrap_custom(source_text, separator_chars, width=70, keep_separators=True):
 
 class GenericReportTable(GenericReportContent):
     def __init__(self, order_id, parent, row_number, column_number, centered=False, cells_list=[],
-                 style="Light Grid Accent 1", autofit=True, font_size=10):
+                 style="Light Grid Accent 1", autofit=True, font_size=10, clean_empty_rows=True):
         """
         :param order_id:
         :param parent:
@@ -62,6 +62,7 @@ class GenericReportTable(GenericReportContent):
         :param style:
         :param autofit:
         :param font_size:
+        :param clean_empty_rows:
         """
 
         GenericReportContent.__init__(self, order_id=order_id, parent=parent, centered=centered)
@@ -71,6 +72,7 @@ class GenericReportTable(GenericReportContent):
         self.font_size = font_size
         self.row_number = row_number
         self.style = style
+        self.clean_empty_rows = clean_empty_rows
 
         if len(self.cells_list) == self.row_number:
             self.cells_type = "row"
@@ -133,7 +135,7 @@ class GenericReportTable(GenericReportContent):
                             continue
                         if column_in_row or column_in_row == 0:
                             empty = False
-                    if empty:
+                    if empty and self.clean_empty_rows:
                         rows_to_delete.append(row_index)
         # Adjust list of index row to delete because we delete row one by one. So if I need to delete the
         # 2 and 3 row, once the 2nd row is deleted the 3rd row is now the 2nd

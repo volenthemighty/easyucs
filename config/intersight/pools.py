@@ -49,10 +49,201 @@ def _find_overlapping_reservations(existing_reservations=None, to_be_pushed_rese
     return overlapping_reservations, non_overlapping_reservations, used_reservations
 
 
+class IntersightIdMappingPolicy(IntersightConfigObject):
+    _CONFIG_NAME = "ID Mapping Policy"
+    _CONFIG_SECTION_NAME = "id_mapping_policies"
+    _INTERSIGHT_SDK_OBJECT_NAME = "pool.IdMappingPolicy"
+
+    def __init__(self, parent=None, pool_id_mapping_policy=None):
+        IntersightConfigObject.__init__(self, parent=parent, sdk_object=pool_id_mapping_policy)
+
+        self.descr = self.get_attribute(attribute_name="description", attribute_secondary_name="descr")
+        self.name = self.get_attribute(attribute_name="name")
+        self.resource_groups = None
+        self.organizations = None
+
+        if self._config.load_from == "live":
+            self._get_resource_groups_and_organizations()
+
+        elif self._config.load_from == "file":
+            for attribute in ["resource_groups", "organizations"]:
+                setattr(self, attribute, None)
+                if attribute in self._object:
+                    setattr(self, attribute, self.get_attribute(attribute_name=attribute))
+
+    def _get_resource_groups_and_organizations(self):
+        if hasattr(self._object, "per_type_combined_selector"):
+            if self._object.per_type_combined_selector:
+                self.resource_groups = []
+                self.organizations = []
+                for per_type_combined_selector in self._object.per_type_combined_selector:
+                    combined_selector = per_type_combined_selector.combined_selector
+                    selector_object_type = per_type_combined_selector.selector_object_type
+
+                    if selector_object_type == "resource.Group":
+                        # We use a regex to get the MOIDs of resource group
+                        regex_resource_group_moid = r"([a-f0-9]{24})"
+                        resource_groups = re.findall(regex_resource_group_moid, combined_selector)
+
+                        for rg_moid in resource_groups:
+                            rg_list = self.get_config_objects_from_ref(
+                                ref={"object_type": "resource.Group", "moid": rg_moid})
+                            if len(rg_list) != 1:
+                                self.logger(level="debug",
+                                            message="Could not find the appropriate resource.Group " +
+                                                    "with MOID " + str(rg_moid) + " for ID Mapping Policy '" +
+                                                    self.name + "'")
+                            else:
+                                self.resource_groups.append(rg_list[0].name)
+
+                    elif selector_object_type == "organization.Organization":
+                        # We use a regex to get the name of the organization
+                        regex_org_moid = r"([a-f0-9]{24})"
+                        res_orgs = re.findall(regex_org_moid, combined_selector)
+
+                        for org_moid in res_orgs:
+                            org_list = self.get_config_objects_from_ref(
+                                ref={"object_type": "organization.Organization", "moid": org_moid})
+                            if len(org_list) != 1:
+                                self.logger(level="debug",
+                                            message="Could not find the appropriate organization.Organization " +
+                                                    "with MOID " + str(org_moid) + " for ID Mapping Policy '" +
+                                                    self.name + "'")
+                            else:
+                                self.organizations.append(org_list[0].name)
+
+    @IntersightConfigObject.update_taskstep_description()
+    def push_object(self):
+        from intersight.model.pool_id_mapping_policy import PoolIdMappingPolicy
+
+        self.logger(message=f"Pushing {self._CONFIG_NAME} configuration: {self.name}")
+        rg_moid_list = []
+        org_moid_list = []
+        resource_selector_list = []
+        if self.resource_groups:
+            for rg_name in self.resource_groups:
+                rg_object_list = self._device.query(
+                                object_type="resource.Group", 
+                                filter=f"Name eq '{rg_name}'"
+                            )
+                if rg_object_list:
+                    if len(rg_object_list) != 1:
+                        self.logger(level="warning",
+                                    message="Could not find Resource Group '" + rg_name +
+                                            "' to assign to ID Mapping Policy " + self.name)
+                    else:
+                        if hasattr(rg_object_list[0], "moid"):
+                            rg_moid_list.append(rg_object_list[0].moid)
+                        else:
+                            self.logger(level="warning",
+                                        message="Could not find moid for Resource Group '" + rg_name +
+                                                "' to assign to ID Mapping Policy" + self.name)
+                else:
+                    self.logger(level="warning",
+                                    message="Could not find Resource Group '" + rg_name +
+                                            "' to assign to ID Mapping Policy " + self.name)
+        if self.organizations:
+            for org_name in self.organizations:
+                target_org_object_list = self._device.query(
+                                object_type="organization.Organization", 
+                                filter=f"Name eq '{org_name}'"
+                            )
+                if target_org_object_list:
+                    if len(target_org_object_list) != 1:
+                        self.logger(level="warning",
+                                    message="Could not find Organization '" + org_name +
+                                            "' to assign to ID Mapping Policy " + self.name)
+                    else:
+                        if hasattr(target_org_object_list[0], "moid"):
+                            # checking whether sharing rule exist between the organizations
+                            source_org_object_list = self._device.query(
+                                object_type="organization.Organization", 
+                                filter=f"Name eq '{self._parent.name}'"
+                            )
+                            if len(source_org_object_list) != 1:
+                                self.logger(level="warning",
+                                            message="Could not find Organization '" + self._parent.name +
+                                                    "' to create ID Mapping Policy " + self.name)
+                            elif source_org_object_list and target_org_object_list:
+                                org_moid = getattr(source_org_object_list[0], "moid")
+                                shared_with_org_moid = target_org_object_list[0].get("moid")
+                                filter_str = (
+                                    f"SharedResource.Moid eq '{org_moid}' and "
+                                    f"SharedWithResource.Moid eq '{shared_with_org_moid}'"
+                                )
+                                existing_rules = self._device.query(
+                                    object_type="iam.SharingRule",
+                                    filter=filter_str
+                                )
+                                if existing_rules:
+                                    org_moid_list.append(target_org_object_list[0].moid)
+                                else:
+                                    message = f"ID Mapping Policy '{self.name}' can only reference target organizations that share the shared organization, organization '{org_name}' is not a shared organization."
+                                    self.logger(level="error", message=message)
+                        else:
+                            self.logger(level="warning",
+                                        message="Could not find moid for Organization '" + org_name +
+                                                "' to assign to ID Mapping Policy" + self.name)
+                else:
+                    self.logger(level="warning",
+                                    message="Could not find Organization '" + org_name +
+                                            "' to assign to ID Mapping Policy " + self.name)
+
+        def create_resource_selector_object(endpoint, items, key='Moid'):
+            from intersight.model.resource_selector import ResourceSelector
+            # Creates a resource selector object based on the resource group or organization of the id mapping policy 
+            selector = f"{endpoint}?$filter={key} in ('" + "','".join(items) + "')"
+            return ResourceSelector(
+                object_type="resource.Selector",
+                class_id="resource.Selector",
+                selector=selector
+            )
+
+        if self.resource_groups and rg_moid_list:
+            resource_selector_list.append(create_resource_selector_object("/api/v1/resource/Groups",
+                                                  rg_moid_list))
+        if self.organizations and org_moid_list:
+            resource_selector_list.append(create_resource_selector_object("/api/v1/organization/Organizations",
+                                                  org_moid_list))
+
+        kwargs = {
+            "object_type": "pool.IdMappingPolicy",
+            "class_id": "pool.IdMappingPolicy",
+            "organization": self.get_parent_org_relationship()
+        }
+        if self.name is not None:
+            kwargs["name"] = self.name
+        if self.tags is not None:
+            kwargs["tags"] = self.create_tags()
+        if rg_moid_list or org_moid_list:
+            kwargs["selectors"] = resource_selector_list
+        else:
+            kwargs["selectors"] = []
+
+        id_mapping_policy = PoolIdMappingPolicy(**kwargs)
+
+        if not self.commit(object_type=self._INTERSIGHT_SDK_OBJECT_NAME, payload=id_mapping_policy, detail=self.name):
+            return False
+
+        return True
+
+
 class IntersightIpPool(IntersightConfigObject):
     _CONFIG_NAME = "IP Pool"
     _CONFIG_SECTION_NAME = "ip_pools"
     _INTERSIGHT_SDK_OBJECT_NAME = "ippool.Pool"
+    _POLICY_MAPPING_TABLE = {
+        "ipv4_blocks": [
+            {     
+                "id_mapping_policy": IntersightIdMappingPolicy
+            }
+        ],
+        "ipv6_blocks": [
+            {     
+                "id_mapping_policy": IntersightIdMappingPolicy
+            }
+        ]
+    }
 
     def __init__(self, parent=None, ippool_pool=None):
         IntersightConfigObject.__init__(self, parent=parent, sdk_object=ippool_pool)
@@ -107,6 +298,13 @@ class IntersightIpPool(IntersightConfigObject):
             # Fetches the IPv4 Blocks configurations
             if hasattr(self._object, "ip_v4_blocks"):
                 for ipv4_block in self._object.ip_v4_blocks:
+                    id_mapping_policy_name = None
+                    if ipv4_block.id_mapping_policy_moid:
+                        for pool_id_mapping_policy in self._config.sdk_objects["pool_id_mapping_policy"]:
+                            if ipv4_block.id_mapping_policy_moid == pool_id_mapping_policy.moid:
+                                id_mapping_policy_name = self._get_policy_name(
+                                    policy=pool_id_mapping_policy)
+                                break
                     if self.configure_subnet_at_block_level:
                         # Add ipv4_configuration to ipv4_block if block level subnet configuration is enabled
                         if ipv4_block.ip_v4_config:
@@ -117,14 +315,22 @@ class IntersightIpPool(IntersightConfigObject):
                                 "secondary_dns": ipv4_block.ip_v4_config.secondary_dns
                             }
                             self.ipv4_blocks.append({"from": ipv4_block._from, "ipv4_configuration": ipv4_configuration,
-                                                     "to": ipv4_block.to})
+                                                     "to": ipv4_block.to, "id_mapping_policy": id_mapping_policy_name})
 
                     else:
-                        self.ipv4_blocks.append({"from": ipv4_block._from, "to": ipv4_block.to})
+                        self.ipv4_blocks.append({"from": ipv4_block._from, "to": ipv4_block.to,
+                         "id_mapping_policy": id_mapping_policy_name})
 
             # Fetches the IPv6 Blocks configurations
             if hasattr(self._object, "ip_v6_blocks"):
                 for ipv6_block in self._object.ip_v6_blocks:
+                    id_mapping_policy_name = None
+                    if ipv6_block.id_mapping_policy_moid:
+                        for pool_id_mapping_policy in self._config.sdk_objects["pool_id_mapping_policy"]:
+                            if ipv6_block.id_mapping_policy_moid == pool_id_mapping_policy.moid:
+                                id_mapping_policy_name = self._get_policy_name(
+                                    policy=pool_id_mapping_policy)
+                                break
                     if self.configure_subnet_at_block_level:
                         # Add ipv6_configuration to ipv6_block if block level subnet configuration is enabled
                         if ipv6_block.ip_v6_config:
@@ -135,9 +341,10 @@ class IntersightIpPool(IntersightConfigObject):
                                 "secondary_dns": ipv6_block.ip_v6_config.secondary_dns
                             }
                             self.ipv6_blocks.append({"from": ipv6_block._from, "ipv6_configuration": ipv6_configuration,
-                                                     "to": ipv6_block.to})
+                                                     "to": ipv6_block.to, "id_mapping_policy": id_mapping_policy_name})
                     else:
-                        self.ipv6_blocks.append({"from": ipv6_block._from, "to": ipv6_block.to})
+                        self.ipv6_blocks.append({"from": ipv6_block._from, "to": ipv6_block.to,
+                                                 "id_mapping_policy": id_mapping_policy_name})
 
             # Fetches the IP reservations
             self.reservations = self._get_reservations()
@@ -255,6 +462,20 @@ class IntersightIpPool(IntersightConfigObject):
                 # Add ipv4_configuration to ipv4_block if block level subnet is defined
                 if self.configure_subnet_at_block_level:
                     kwargs["ip_v4_config"] = ipv4_block["ipv4_configuration"]
+                if ipv4_block.get("id_mapping_policy") is not None:
+                    pool_id_mapping_policy = self.get_live_object(
+                        object_name=ipv4_block.get("id_mapping_policy"),
+                        object_type="pool.IdMappingPolicy"
+                    )
+                    if pool_id_mapping_policy:
+                        kwargs["id_mapping_policy_moid"] = pool_id_mapping_policy.moid
+                    else:
+                        self._config.push_summary_manager.add_object_status(
+                            obj=self,
+                            obj_detail=f"Attaching ID Mapping Policy '{ipv4_block['id_mapping_policy']}' to - IPv4 Block",
+                            obj_type="pool.IdMappingPolicy", status="failed",
+                            message=f"Failed to find ID Mapping Policy '{ipv4_block['id_mapping_policy']}'"
+                        )
 
                 ipv4_blocks.append(IppoolIpV4Block(**kwargs))
 
@@ -277,6 +498,20 @@ class IntersightIpPool(IntersightConfigObject):
                 # Add ipv6_configuration to ipv6_block if block level subnet is defined
                 if self.configure_subnet_at_block_level:
                     kwargs["ip_v6_config"] = ipv6_block["ipv6_configuration"]
+                if ipv6_block.get("id_mapping_policy") is not None:
+                    pool_id_mapping_policy = self.get_live_object(
+                        object_name=ipv6_block.get("id_mapping_policy"),
+                        object_type="pool.IdMappingPolicy"
+                    )
+                    if pool_id_mapping_policy:
+                        kwargs["id_mapping_policy_moid"] = pool_id_mapping_policy.moid
+                    else:
+                        self._config.push_summary_manager.add_object_status(
+                            obj=self,
+                            obj_detail=f"Attaching ID Mapping Policy '{ipv6_block['id_mapping_policy']}' to - IPv6 Block",
+                            obj_type="pool.IdMappingPolicy", status="failed",
+                            message=f"Failed to find ID Mapping Policy '{ipv6_block['id_mapping_policy']}'"
+                        )
 
                 ipv6_blocks.append(IppoolIpV6Block(**kwargs))
 
@@ -1468,7 +1703,9 @@ class IntersightResourcePool(IntersightConfigObject):
             if getattr(self._object, "qualification_policies", None):
                 server_pool_qualification_policies = []
                 for qualification_policy in self._object.qualification_policies:
-                    server_pool_qualification_policies.append(self._get_policy_name(policy=qualification_policy))
+                    qual_policy = self._get_policy_name(policy=qualification_policy)
+                    if qual_policy:
+                        server_pool_qualification_policies.append(qual_policy)
 
                 self.server_pool_qualification_policies = server_pool_qualification_policies
 
@@ -1547,7 +1784,10 @@ class IntersightResourcePool(IntersightConfigObject):
         # Determine the target platform for this Resource Pool
         if self._object.resource_pool_parameters:
             if self._object.resource_pool_parameters.get("management_mode") == "Intersight":
-                return "FI-Attached"
+                if self._object.resource_pool_parameters.get("target_platform") == "UnifiedEdgeServer":
+                    return "Unified Edge"
+                elif self._object.resource_pool_parameters.get("target_platform") == "FIAttached":
+                    return "FI-Attached"
             elif self._object.resource_pool_parameters.get("management_mode") == "IntersightStandalone":
                 return "Standalone"
 
@@ -1639,8 +1879,13 @@ class IntersightResourcePool(IntersightConfigObject):
             }
             if self.target_platform == "Standalone":
                 resource_pool_parameters_kwargs["management_mode"] = "IntersightStandalone"
+                resource_pool_parameters_kwargs["target_platform"] = "Standalone"
             elif self.target_platform == "FI-Attached":
                 resource_pool_parameters_kwargs["management_mode"] = "Intersight"
+                resource_pool_parameters_kwargs["target_platform"] = "FIAttached"
+            elif self.target_platform == "Unified Edge":
+                resource_pool_parameters_kwargs["management_mode"] = "Intersight"
+                resource_pool_parameters_kwargs["target_platform"] = "UnifiedEdgeServer"
 
             resource_pool_parameters = ResourcepoolServerPoolParameters(**resource_pool_parameters_kwargs)
             if resource_pool_parameters:

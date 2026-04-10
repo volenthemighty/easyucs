@@ -1,50 +1,50 @@
 {
-   "id": "intersight_config_orgs_ucs_domain_profiles#",
+   "id": "intersight_config_orgs_unified_edge_profiles#",
    "$schema": "http://json-schema.org/draft-07/schema#",
-   "title": "EasyUCS intersight config orgs ucs_domain_profiles section",
-   "description": "EasyUCS intersight config orgs ucs_domain_profiles section JSON schema",
+   "title": "EasyUCS intersight config orgs unified_edge_profiles section",
+   "description": "EasyUCS intersight config orgs unified_edge_profiles section JSON schema",
    "type": "object",
    "properties": {
       "comment": {
-         "description": "UCS Domain Profile Comments",
+         "description": "Unified Edge Profile Comments",
          "type": "string",
          "default": ""
       },
       "descr": {
-         "description": "UCS Domain Profile Description",
+         "description": "Unified Edge Profile Description",
          "type": "string",
          "default": "",
          "pattern": "^$|^[a-zA-Z0-9]+[\\x00-\\xFF]*$",
          "maxLength": 1024
       },
       "name": {
-         "description": "UCS Domain Profile Name",
+         "description": "Unified Edge Profile Name",
          "type": "string",
          "default": "",
          "pattern": "^[a-zA-Z0-9_.-]{1,64}$"
       },
       "user_label": {
-         "description": "UCS Domain Profile User Label",
+         "description": "Unified Edge Profile User Label",
          "type": "string",
          "default": "",
          "pattern": "^[a-zA-Z0-9 !#$%&*+,()\\[\\]{}|/.?@_:;~-]{1,64}$"
       },
       "tags": {
-         "description": "UCS Domain Profile Tags",
+         "description": "Unified Edge Profile Tags",
          "type": "array",
          "items": {
-            "description": "UCS Domain Profile Tag",
+            "description": "Unified Edge Profile Tag",
             "type": "object",
             "properties": {
                "key": {
-                  "description": "UCS Domain Profile Tag Key",
+                  "description": "Unified Edge Profile Tag Key",
                   "type": "string",
                   "default": "",
                   "minLength": 1,
                   "maxLength": 128
                },
                "value": {
-                  "description": "UCS Domain Profile Tag Value",
+                  "description": "Unified Edge Profile Tag Value",
                   "type": "string",
                   "default": "",
                   "minLength": 0,
@@ -58,28 +58,23 @@
          },
          "minItems": 1
       },
-      "auditd_policy": {
-         "description": "UCS Domain Profile AuditD Policy",
-         "type": "string",
-         "default": ""
-      },
-      "ldap_policy": {
-         "description": "UCS Domain Profile LDAP Policy",
+      "local_user_policy": {
+         "description": "Unified Edge Profile Local User Policy",
          "type": "string",
          "default": ""
       },
       "network_connectivity_policy": {
-         "description": "UCS Domain Profile Network Connectivity Policy",
+         "description": "Unified Edge Profile Network Connectivity Policy",
          "type": "string",
          "default": ""
       },
       "ntp_policy": {
-         "description": "UCS Domain Profile NTP Policy",
+         "description": "Unified Edge Profile NTP Policy",
          "type": "string",
          "default": ""
       },
       "operational_state": {
-         "description": "UCS Domain Profile - Operational State",
+         "description": "Unified Edge Profile - Operational State",
          "type": "object",
          "properties": {
             "config_state": {
@@ -111,75 +106,63 @@
          "additionalProperties": false
       },
       "port_policies": {
-         "description": "UCS Domain Profile Port Policies",
+         "description": "Unified Edge Profile Port Policies",
          "type": "object",
          "properties": {
-            "fabric_a": {
-               "description": "UCS Domain Profile Port Policy for Fabric Interconnect A",
+            "ecmc_a": {
+               "description": "Unified Edge Profile Port Policy for Edge Chassis Management Controller A",
                "type": "string",
                "default": ""
             },
-            "fabric_b": {
-               "description": "UCS Domain Profile Port Policy for Fabric Interconnect B",
+            "ecmc_b": {
+               "description": "Unified Edge Profile Port Policy for Edge Chassis Management Controller B",
                "type": "string",
                "default": ""
             }
          },
          "additionalProperties": false
       },
-      "snmp_policy": {
-         "description": "UCS Domain Profile SNMP Policy",
+      "power_policy": {
+         "description": "Unified Edge Profile Power Policy",
          "type": "string",
          "default": ""
       },
       "switch_control_policy": {
-         "description": "UCS Domain Profile Switch Control Policy",
+         "description": "Unified Edge Profile Switch Control Policy",
          "type": "string",
          "default": ""
       },
       "syslog_policy": {
-         "description": "UCS Domain Profile Syslog Policy",
+         "description": "Unified Edge Profile Syslog Policy",
          "type": "string",
          "default": ""
       },
       "system_qos_policy": {
-         "description": "UCS Domain Profile System QoS Policy",
+         "description": "Unified Edge Profile System QoS Policy",
          "type": "string",
          "default": ""
       },
-      "ucs_domain_profile_template": {
-         "description": "Source UCS Domain Profile Template from which this UCS Domain Profile has been derived",
+      "thermal_policy": {
+         "description": "Unified Edge Profile Thermal Policy",
+         "type": "string",
+         "default": ""
+      },
+      "unified_edge_profile_template": {
+         "description": "Source Unified Edge Profile Template from which this Unified Edge Profile has been derived",
          "type": "string",
          "default": ""
       },
       "vlan_policies": {
-         "description": "UCS Domain Profile VLAN Policies",
+         "description": "Unified Edge Profile VLAN Policies",
          "type": "object",
          "properties": {
-            "fabric_a": {
-               "description": "UCS Domain Profile VLAN Policy for Fabric Interconnect A",
+            "ecmc_a": {
+               "description": "Unified Edge Profile VLAN Policy for Edge Chassis Management Controller A",
                "type": "string",
                "default": ""
             },
-            "fabric_b": {
-               "description": "UCS Domain Profile VLAN Policy for Fabric Interconnect B",
-               "type": "string",
-               "default": ""
-            }
-         },
-         "additionalProperties": false
-      },
-      "vsan_policies": {
-         "description": "UCS Domain Profile VSAN Policies",
-         "type": "object",
-         "properties": {
-            "fabric_a": {
-               "description": "UCS Domain Profile VSAN Policy for Fabric Interconnect A",
-               "type": "string",
-               "default": ""
-            },
-            "fabric_b": {
-               "description": "UCS Domain Profile VSAN Policy for Fabric Interconnect B",
+            "ecmc_b": {
+               "description": "Unified Edge Profile VLAN Policy for Edge Chassis Management Controller B",
                "type": "string",
                "default": ""
             }

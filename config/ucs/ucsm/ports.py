@@ -400,7 +400,7 @@ class UcsSystemBreakoutPort(UcsSystemConfigObject):
                                 ", waiting for a commit")
 
         parent_mo = "fabric/Cabling/" + self.fabric.upper()
-        if self.breakout_type in ["10g-4x", "25g-4x"]:
+        if self.breakout_type in ["10g-4x", "25g-4x", "100g-2x", "100g-4x"]:
             # This is an Ethernet Breakout port
             mo_fabric_breakout = FabricBreakout(parent_mo_or_dn=parent_mo, port_id=self.port_id, slot_id=self.slot_id,
                                                 transport_type="ethernet", breakout_type=self.breakout_type)
@@ -1490,6 +1490,16 @@ class UcsSystemSanUnifiedPort(UcsSystemConfigObject):
                     self.logger("error", "Incorrect values for slot_id in fabric " + self.fabric)
                     return False
                 if self.port_id_start not in ["33", "34", "35", "36"] or self.port_id_end != "36"\
+                        or int(self.port_id_start) >= int(self.port_id_end):
+                    self.logger("error", "Incorrect values for port_id start or end in fabric " + self.fabric)
+                    return False
+
+            elif self._device.fi_a_model == "UCS-FI-6652":
+                self.logger("debug", "Trying to set Unified Ports on FI model " + self._device.fi_a_model)
+                if self.slot_id != "1":
+                    self.logger("error", "Incorrect values for slot_id in fabric " + self.fabric)
+                    return False
+                if self.port_id_start != "17" or self.port_id_end not in ["20", "24", "28", "32"]\
                         or int(self.port_id_start) >= int(self.port_id_end):
                     self.logger("error", "Incorrect values for port_id start or end in fabric " + self.fabric)
                     return False

@@ -1702,6 +1702,8 @@ class IntersightEthernetNetworkPolicy(IntersightConfigObject):
         self.name = self.get_attribute(attribute_name="name")
         self.target_platform = self.get_attribute(attribute_name="target_platform")
         self.vlan_mode = None
+        self.enable_qinq_tunneling = None
+        self.qinq_vlan = None
 
         if self._config.load_from == "live":
             # Renaming Target Platform to be more user-friendly
@@ -1711,10 +1713,14 @@ class IntersightEthernetNetworkPolicy(IntersightConfigObject):
             if hasattr(self._object, "vlan_settings"):
                 if self._object.vlan_settings:
                     self.vlan_mode = self._object.vlan_settings.mode.lower()
-                    self.default_vlan = self._object.vlan_settings.default_vlan
+                    self.enable_qinq_tunneling = self._object.vlan_settings.qinq_enabled
+                    if self.enable_qinq_tunneling:
+                        self.qinq_vlan = self._object.vlan_settings.qinq_vlan
+                    else:
+                        self.default_vlan = self._object.vlan_settings.default_vlan
 
         elif self._config.load_from == "file":
-            for attribute in ["default_vlan", "vlan_mode"]:
+            for attribute in ["default_vlan", "vlan_mode", "enable_qinq_tunneling", "qinq_vlan"]:
                 setattr(self, attribute, None)
                 if attribute in self._object:
                     setattr(self, attribute, self.get_attribute(attribute_name=attribute))
@@ -1737,8 +1743,17 @@ class IntersightEthernetNetworkPolicy(IntersightConfigObject):
         if self.tags is not None:
             kwargs["tags"] = self.create_tags()
         if self.target_platform is not None:
+            # We keep this section for compatibility purposes, but "target_platform" attribute
+            # is deprecated starting with EasyUCS 1.0.6.
+            # This policy is now applicable only for UCS Servers (Standalone).
             if self.target_platform in ["FI-Attached"]:
-                kwargs["target_platform"] = "FIAttached"
+                self.logger(
+                    level="warning",
+                    message=f"Ethernet Network Policy '{self.name}': 'target_platform' attribute is deprecated "
+                            f"and has been removed starting with EasyUCS 1.0.6. "
+                            f"FI-Attached was specified, but this policy is now applicable only for UCS Servers "
+                            f"(Standalone). The value will be ignored and policy will use default value."
+                )
             else:
                 kwargs["target_platform"] = self.target_platform
 
@@ -1747,6 +1762,10 @@ class IntersightEthernetNetworkPolicy(IntersightConfigObject):
             "object_type": "vnic.VlanSettings",
             "class_id": "vnic.VlanSettings"
         }
+        if self.enable_qinq_tunneling is not None:
+            vlan_settings_kwargs["qinq_enabled"] = self.enable_qinq_tunneling
+        if self.qinq_vlan is not None:
+            vlan_settings_kwargs["qinq_vlan"] = self.qinq_vlan
         if self.default_vlan is not None:
             vlan_settings_kwargs["default_vlan"] = self.default_vlan
         if self.vlan_mode is not None:
@@ -2269,6 +2288,10 @@ class IntersightFirmwarePolicy(IntersightConfigObject):
         if self._config.load_from == "live":
             if self.target_platform == "FIAttached":
                 self.target_platform = "FI-Attached"
+
+            if self.target_platform == "UnifiedEdgeServer":
+                self.target_platform = "Unified Edge"
+
             if hasattr(self._object, "model_bundle_combo"):
                 if self._object.model_bundle_combo:
                     self.models = []
@@ -2309,7 +2332,12 @@ class IntersightFirmwarePolicy(IntersightConfigObject):
         if self.tags is not None:
             kwargs["tags"] = self.create_tags()
         if self.target_platform is not None:
-            kwargs["target_platform"] = "FIAttached" if self.target_platform == "FI-Attached" else self.target_platform
+            if self.target_platform == "FI-Attached":
+                kwargs["target_platform"] = "FIAttached"
+            elif self.target_platform == "Unified Edge":
+                kwargs["target_platform"] = "UnifiedEdgeServer"
+            else:
+                kwargs["target_platform"] = self.target_platform
         if self.excluded_components is not None:
             kwargs["exclude_component_list"] = self.excluded_components
 
@@ -3091,6 +3119,9 @@ class IntersightLanConnectivityPolicy(IntersightConfigObject):
             if self.target_platform == "FIAttached":
                 self.target_platform = "FI-Attached"
 
+            if self.target_platform == "UnifiedEdgeServer":
+                self.target_platform = "Unified Edge"
+
             # Renaming IQN Allocation Type to lowercase to be more user-friendly
             # (and aligned with vNIC mac_address_allocation_type)
             if self.iqn_allocation_type:
@@ -3150,9 +3181,10 @@ class IntersightLanConnectivityPolicy(IntersightConfigObject):
                 if vnic_eth_if.lan_connectivity_policy:
                     if vnic_eth_if.lan_connectivity_policy.moid == self._moid:
                         vnic = {
-                            "name": vnic_eth_if.name,
-                            "pci_order": vnic_eth_if.order
+                            "name": vnic_eth_if.name
                         }
+                        if self.target_platform not in ["Unified Edge"]:
+                            vnic["pci_order"] = vnic_eth_if.order
 
                         if self.target_platform in ["FI-Attached"]:
                             # If the vNIC is created from a vNIC template, fetch the source vNIC template
@@ -3166,16 +3198,17 @@ class IntersightLanConnectivityPolicy(IntersightConfigObject):
                                     overriden_list = vnic_eth_if.overridden_list
 
                         if vnic_eth_if.placement:
-                            vnic["automatic_slot_id_assignment"] = vnic_eth_if.placement.auto_slot_id
-                            if not vnic_eth_if.placement.auto_slot_id:
-                                vnic["slot_id"] = vnic_eth_if.placement.id
-                            vnic["automatic_pci_link_assignment"] = vnic_eth_if.placement.auto_pci_link
-                            if not vnic_eth_if.placement.auto_pci_link:
-                                vnic["pci_link_assignment_mode"] = vnic_eth_if.placement.pci_link_assignment_mode
-                                if vnic_eth_if.placement.pci_link_assignment_mode in ["Custom"]:
-                                    vnic["pci_link"] = vnic_eth_if.placement.pci_link
+                            if self.target_platform not in ["Unified Edge"]:
+                                vnic["automatic_slot_id_assignment"] = vnic_eth_if.placement.auto_slot_id
+                                if not vnic_eth_if.placement.auto_slot_id:
+                                    vnic["slot_id"] = vnic_eth_if.placement.id
+                                vnic["automatic_pci_link_assignment"] = vnic_eth_if.placement.auto_pci_link
+                                if not vnic_eth_if.placement.auto_pci_link:
+                                    vnic["pci_link_assignment_mode"] = vnic_eth_if.placement.pci_link_assignment_mode
+                                    if vnic_eth_if.placement.pci_link_assignment_mode in ["Custom"]:
+                                        vnic["pci_link"] = vnic_eth_if.placement.pci_link
 
-                            if self.target_platform in ["FI-Attached"]:
+                            if self.target_platform in ["FI-Attached", "Unified Edge"]:
 
                                 # Add 'switch_id' to the vnic dictionary if vNIC template is absent or 'switch_id' is an
                                 # overridden field
@@ -3189,29 +3222,30 @@ class IntersightLanConnectivityPolicy(IntersightConfigObject):
                                 vnic["uplink_port"] = vnic_eth_if.placement.uplink
 
                         # Add CDN to the vNIC dictionary if vNIC template is absent
-                        if not vnic.get("vnic_template"):
+                        if not vnic.get("vnic_template") and self.target_platform not in ["Unified Edge"]:
                             if vnic_eth_if.cdn:
                                 vnic["cdn_source"] = vnic_eth_if.cdn.source
                                 vnic["cdn_value"] = vnic_eth_if.cdn.value
 
-                        if self.target_platform in ["FI-Attached"]:
+                        if self.target_platform in ["FI-Attached", "Unified Edge"]:
                             # Add the following attributes to the vNIC dictionary if vNIC Template is absent or
                             # attribute is an overridden field
                             if not vnic.get("vnic_template") or "PinGroupName" in overriden_list:
                                 vnic["pin_group_name"] = vnic_eth_if.pin_group_name if vnic_eth_if.pin_group_name \
                                     else None
-                            if not vnic.get("vnic_template"):
+                            if not vnic.get("vnic_template") and self.target_platform not in ["Unified Edge"]:
                                 vnic["enable_failover"] = vnic_eth_if.failover_enabled
                             if not vnic.get("vnic_template") or "MacPool" in overriden_list:
-                                vnic["mac_address_allocation_type"] = vnic_eth_if.mac_address_type.lower()
-                                # We only fetch the MAC Address Pool or Static MAC for FI-Attached servers
-                                if vnic_eth_if.mac_address_type in ["POOL"]:
-                                    if vnic_eth_if.mac_pool:
-                                        mac_pool = self._get_policy_name(policy=vnic_eth_if.mac_pool)
-                                        if mac_pool:
-                                            vnic["mac_address_pool"] = mac_pool
-                                elif vnic_eth_if.mac_address_type in ["STATIC"]:
-                                    vnic["mac_address_static"] = vnic_eth_if.static_mac_address
+                                if self.target_platform not in ["Unified Edge"]:
+                                    vnic["mac_address_allocation_type"] = vnic_eth_if.mac_address_type.lower()
+                                    # We only fetch the MAC Address Pool or Static MAC for FI-Attached servers
+                                    if vnic_eth_if.mac_address_type in ["POOL"]:
+                                        if vnic_eth_if.mac_pool:
+                                            mac_pool = self._get_policy_name(policy=vnic_eth_if.mac_pool)
+                                            if mac_pool:
+                                                vnic["mac_address_pool"] = mac_pool
+                                    elif vnic_eth_if.mac_address_type in ["STATIC"]:
+                                        vnic["mac_address_static"] = vnic_eth_if.static_mac_address
                             # We only fetch Ethernet Network Group Policy, Ethernet Network Control Policy &
                             # iSCSI Boot Policy for FI-Attached servers
                             if not vnic.get("vnic_template"):
@@ -3349,8 +3383,10 @@ class IntersightLanConnectivityPolicy(IntersightConfigObject):
         if self.iqn_identifier is not None:
             kwargs["static_iqn_name"] = self.iqn_identifier
         if self.target_platform is not None:
-            if self.target_platform in ["FI-Attached"]:
+            if self.target_platform == "FI-Attached":
                 kwargs["target_platform"] = "FIAttached"
+            elif self.target_platform == "Unified Edge":
+                kwargs["target_platform"] = "UnifiedEdgeServer"
             else:
                 kwargs["target_platform"] = self.target_platform
         if self.vnic_placement_mode is not None:
@@ -4362,7 +4398,8 @@ class IntersightLocalUserPolicy(IntersightConfigObject):
         # We use this to make sure all options of Local Users are set to None if they are not present
         if self.local_users:
             for local_user in self.local_users:
-                for attribute in ["enable", "password", "role", "username"]:
+                for attribute in ["account_types", "choose_custom_account_types", "enable", "ipmi_password",
+                                  "password", "role", "use_different_ipmi_password", "username"]:
                     if attribute not in local_user:
                         local_user[attribute] = None
 
@@ -4385,8 +4422,33 @@ class IntersightLocalUserPolicy(IntersightConfigObject):
                             self.logger(level="warning",
                                         message="Password of " + self._CONFIG_NAME + " '" + self.name +
                                                 "' - Local User '" + str(username) + "' can't be exported")
-                        local_users.append({"username": username, "role": role,
-                                            "enable": iam_end_point_user_role.enabled})
+                        local_user = {
+                            "username": username,
+                            "role": role,
+                            "enable": iam_end_point_user_role.enabled
+                        }
+
+                        if hasattr(iam_end_point_user_role, "account_type_user_defined"):
+                            if iam_end_point_user_role.account_type_user_defined:
+                                local_user["choose_custom_account_types"] = (
+                                    iam_end_point_user_role.account_type_user_defined)
+                                if hasattr(iam_end_point_user_role, "account_types"):
+                                    account_types = []
+                                    for account_type in iam_end_point_user_role.account_types:
+                                        account_types.append(account_type.name)
+                                        if (account_type.name == "IPMI" and
+                                                hasattr(account_type, "use_diff_ipmi_password")):
+                                            local_user["use_different_ipmi_password"] = (
+                                                account_type.use_diff_ipmi_password)
+                                            if account_type.is_password_set:
+                                                self.logger(level="warning",
+                                                            message="IPMI Password of local user '" + username +
+                                                                    "' in " + self._CONFIG_NAME + " '" + self.name +
+                                                                    "' cannot be exported.")
+
+                                    local_user["account_types"] = account_types
+
+                        local_users.append(local_user)
 
             return local_users
 
@@ -4441,6 +4503,7 @@ class IntersightLocalUserPolicy(IntersightConfigObject):
         if self.local_users:
             from intersight.model.iam_end_point_user_role import IamEndPointUserRole
             from intersight.model.iam_end_point_user import IamEndPointUser
+            from intersight.model.iam_account_type_base import IamAccountTypeBase
 
             for local_user in self.local_users:
                 end_point_user_role_kwargs = {
@@ -4514,6 +4577,46 @@ class IntersightLocalUserPolicy(IntersightConfigObject):
                             obj_type="iam.EndPointUserRole", status="failed", message=err_message
                         )
                         return False
+                if local_user.get("choose_custom_account_types") is not None:
+                    end_point_user_role_kwargs["account_type_user_defined"] = local_user["choose_custom_account_types"]
+                    if local_user.get("account_types") is not None:
+                        iam_account_types = []
+                        for account_type in local_user["account_types"]:
+                            if account_type == "Local":
+                                iam_account_type_local_kwargs = {
+                                    "object_type": "iam.AccountTypeLocal",
+                                    "class_id": "iam.AccountTypeLocal",
+                                    "name": account_type
+                                }
+                                iam_account_types.append(IamAccountTypeBase(**iam_account_type_local_kwargs))
+                            elif account_type == "IPMI":
+                                iam_account_type_ipmi_kwargs = {
+                                    "object_type": "iam.AccountTypeIpmi",
+                                    "class_id": "iam.AccountTypeIpmi",
+                                    "name": account_type
+                                }
+                                if local_user.get("use_different_ipmi_password"):
+                                    iam_account_type_ipmi_kwargs["use_diff_ipmi_password"] =\
+                                        local_user["use_different_ipmi_password"]
+                                    if local_user.get("ipmi_password") is not None:
+                                        iam_account_type_ipmi_kwargs["password"] = local_user.get("ipmi_password")
+                                    elif self._config.convert_settings.get("default_password", None):
+                                        end_point_user_role_kwargs["password"] = self._config.convert_settings[
+                                            "default_password"]
+                                        self.logger(
+                                            level="debug",
+                                            message="Using default_password from the convert_settings for field "
+                                                    "'password' of object iam.AccountTypeIpmi"
+                                        )
+                                    else:
+                                        self.logger(
+                                            level="warning",
+                                            message="No password provided for field 'ipmi_password' of object "
+                                                    "iam.AccountTypeIpmi"
+                                        )
+
+                                iam_account_types.append(IamAccountTypeBase(**iam_account_type_ipmi_kwargs))
+                        end_point_user_role_kwargs["account_types"] = iam_account_types
 
                 iam_end_point_user_role = IamEndPointUserRole(**end_point_user_role_kwargs)
 
@@ -4651,6 +4754,152 @@ class IntersightNtpPolicy(IntersightConfigObject):
         ntp_policy = NtpPolicy(**kwargs)
 
         if not self.commit(object_type=self._INTERSIGHT_SDK_OBJECT_NAME, payload=ntp_policy, detail=self.name):
+            return False
+
+        return True
+
+
+class IntersightPcieConnectivityPolicy(IntersightConfigObject):
+    _CONFIG_NAME = "PCIe Connectivity Policy"
+    _CONFIG_SECTION_NAME = "pcie_connectivity_policies"
+    _INTERSIGHT_SDK_OBJECT_NAME = "compute.PcieConnectivityPolicy"
+
+    def __init__(self, parent=None, compute_pcie_connectivity_policy=None):
+        IntersightConfigObject.__init__(self, parent=parent, sdk_object=compute_pcie_connectivity_policy)
+
+        self.descr = self.get_attribute(attribute_name="description", attribute_secondary_name="descr")
+        self.name = self.get_attribute(attribute_name="name")
+        self.endpoint_mappings = None
+
+        if self._config.load_from == "live":
+            if hasattr(self._object, "pcie_zones"):
+                if self._object.pcie_zones:
+                    self.endpoint_mappings = []
+                    for pcie_zone in self._object.pcie_zones:
+                        endpoint_mapping = {}
+                        if pcie_zone.root_pcie_endpoint:
+                            endpoint_mapping.update({"cpus": {"id": pcie_zone.root_pcie_endpoint.cpu_id}})
+                        for pcie_endpoint in pcie_zone.pcie_endpoints:
+                            if pcie_endpoint.pcie_endpoint_type == "GPU" and pcie_endpoint.gpu_prop_filters:
+                                endpoint_mapping.update({"gpus": {
+                                    "quantity": pcie_endpoint.gpu_prop_filters[0].count,
+                                    "model": pcie_endpoint.gpu_prop_filters[0].model}})
+                            elif pcie_endpoint.pcie_endpoint_type == "Adapter" and pcie_endpoint.adapter_unit_prop_filters:
+                                endpoint_mapping.update({"smartnic": {
+                                    "quantity": pcie_endpoint.adapter_unit_prop_filters[0].count,
+                                    "model": pcie_endpoint.adapter_unit_prop_filters[0].model}})
+                        self.endpoint_mappings.append(endpoint_mapping)
+        
+        elif self._config.load_from == "file":
+            for attribute in ["endpoint_mappings"]:
+                setattr(self, attribute, None)
+                if attribute in self._object:
+                    setattr(self, attribute, self.get_attribute(attribute_name=attribute))
+        
+        self.clean_object()
+
+    def clean_object(self):
+        if self.endpoint_mappings:
+            for endpoint_mapping in self.endpoint_mappings:
+                for attribute in ["cpus", "gpus", "smartnic"]:
+                    if attribute not in endpoint_mapping:
+                        endpoint_mapping[attribute] = None
+                if endpoint_mapping.get("cpus"):
+                    for attribute in ["id"]:
+                        if attribute not in endpoint_mapping["cpus"]:
+                            endpoint_mapping["cpus"][attribute] = None
+                if endpoint_mapping.get("gpus"):
+                    for attribute in ["quantity", "model"]:
+                        if attribute not in endpoint_mapping["gpus"]:
+                            endpoint_mapping["gpus"][attribute] = None
+                if endpoint_mapping.get("smartnic"):
+                    for attribute in ["quantity", "model"]:
+                        if attribute not in endpoint_mapping["smartnic"]:
+                            endpoint_mapping["smartnic"][attribute] = None
+                        
+    @IntersightConfigObject.update_taskstep_description()
+    def push_object(self):
+        from intersight.model.compute_pcie_connectivity_policy import ComputePcieConnectivityPolicy
+
+        self.logger(message=f"Pushing {self._CONFIG_NAME} configuration: {self.name}")
+
+        kwargs = {
+            "object_type": self._INTERSIGHT_SDK_OBJECT_NAME,
+            "class_id": self._INTERSIGHT_SDK_OBJECT_NAME,
+            "organization": self.get_parent_org_relationship()
+        }
+        if self.name is not None:
+            kwargs["name"] = self.name
+        if self.descr is not None:
+            kwargs["description"] = self.descr
+        if self.tags is not None:
+            kwargs["tags"] = self.create_tags()
+        if self.endpoint_mappings is not None:
+            pcie_zones = []
+            for endpoint_mapping in self.endpoint_mappings:
+                pcie_endpoints = []
+                from intersight.model.compute_pcie_zone import ComputePcieZone
+                compute_pcie_zone_kwargs = {
+                    "class_id": "compute.PcieZone",
+                    "object_type": "compute.PcieZone",
+                }
+                if endpoint_mapping.get("cpus") is not None:
+                    from intersight.model.compute_cpu_config import ComputeCpuConfig
+                    compute_cpu_config_kwargs = {
+                        "class_id": "compute.CpuConfig",
+                        "object_type": "compute.CpuConfig",
+                    }
+                    compute_cpu_config_kwargs["root_pcie_endpoint_type"] = "CPU"
+                    compute_cpu_config_kwargs["cpu_id"] = endpoint_mapping["cpus"].get("id")
+                    compute_pcie_zone_kwargs["root_pcie_endpoint"] = ComputeCpuConfig(**compute_cpu_config_kwargs)
+
+                if endpoint_mapping.get("gpus") is not None:
+                    from intersight.model.compute_gpu_config import ComputeGpuConfig
+                    compute_gpu_config_kwargs = {
+                        "class_id": "compute.GpuConfig",
+                        "object_type": "compute.GpuConfig",
+                    }
+                    compute_gpu_config_kwargs["pcie_endpoint_type"] = "GPU"
+                    from intersight.model.compute_gpu_prop_filter import ComputeGpuPropFilter
+                    compute_gpu_prop_filters = []
+                    compute_gpu_prop_filter_kwargs = {
+                        "class_id": "compute.GpuPropFilter",
+                        "object_type": "compute.GpuPropFilter",
+                    }
+                    compute_gpu_prop_filter_kwargs["count"] = endpoint_mapping["gpus"].get("quantity")
+                    compute_gpu_prop_filter_kwargs["model"] = endpoint_mapping["gpus"].get("model")
+                    compute_gpu_prop_filters.append(ComputeGpuPropFilter(**compute_gpu_prop_filter_kwargs))
+
+                    compute_gpu_config_kwargs["gpu_prop_filters"] = compute_gpu_prop_filters
+                    pcie_endpoints.append(ComputeGpuConfig(**compute_gpu_config_kwargs))
+                
+                if endpoint_mapping.get("smartnic") is not None:
+                    from intersight.model.compute_adapter_unit_config import ComputeAdapterUnitConfig
+                    compute_adapter_unit_config_kwargs = {
+                        "class_id": "compute.AdapterUnitConfig",
+                        "object_type": "compute.AdapterUnitConfig",
+                    }
+                    compute_adapter_unit_config_kwargs["pcie_endpoint_type"] = "Adapter"
+                    from intersight.model.compute_adapter_unit_prop_filter import ComputeAdapterUnitPropFilter
+                    compute_adapter_unit_prop_filters = []
+                    compute_adapter_unit_prop_filter_kwargs = {
+                        "class_id": "compute.AdapterUnitPropFilter",
+                        "object_type": "compute.AdapterUnitPropFilter",
+                    }
+                    compute_adapter_unit_prop_filter_kwargs["count"] = endpoint_mapping["smartnic"].get("quantity")
+                    compute_adapter_unit_prop_filter_kwargs["model"] = endpoint_mapping["smartnic"].get("model")
+                    compute_adapter_unit_prop_filters.append(ComputeAdapterUnitPropFilter(**compute_adapter_unit_prop_filter_kwargs))
+
+                    compute_adapter_unit_config_kwargs["adapter_unit_prop_filters"] = compute_adapter_unit_prop_filters
+                    pcie_endpoints.append(ComputeAdapterUnitConfig(**compute_adapter_unit_config_kwargs))
+                compute_pcie_zone_kwargs["pcie_endpoints"] = pcie_endpoints
+                pcie_zones.append(ComputePcieZone(**compute_pcie_zone_kwargs))
+            kwargs["pcie_zones"] = pcie_zones
+
+        compute_pcie_connectivity_policy = ComputePcieConnectivityPolicy(**kwargs)
+
+        if not self.commit(object_type=self._INTERSIGHT_SDK_OBJECT_NAME, payload=compute_pcie_connectivity_policy,
+                           detail=self.name):
             return False
 
         return True

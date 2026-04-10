@@ -107,7 +107,9 @@
                      "UCSX-210C-M7",
                      "UCSX-210C-M8",
                      "UCSX-215C-M8",
-                     "UCSX-410C-M7"
+                     "UCSX-410C-M7",
+                     "UCSX-410C-M8",
+                     "UCSXE-130C-M8"
                   ]
                }
             },
@@ -125,7 +127,8 @@
          "default": "Standalone",
          "enum": [
             "FI-Attached",
-            "Standalone"
+            "Standalone",
+            "Unified Edge"
          ]
       }
    },

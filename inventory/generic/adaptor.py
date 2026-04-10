@@ -152,7 +152,7 @@ class GenericAdaptor(GenericInventoryObject):
                                                      f"device '{vendor}, {device}, {subvendor}, {subdevice}'")
 
         # Manual entries
-        if self.model == "Intel MLOM Quad Port 1Gb RJ45 NIC":
+        if self.model in ["Intel MLOM Quad Port 1Gb RJ45 NIC", "Intel(R) I350-mLOM 1 Gbps Network Controller"]:
             self.sku = "UCSC-MLOM-IRJ45"
         elif self.model == "Intel i350 Quad Port 1Gb Adapter":
             self.sku = "UCSC-PCIE-IRJ45"

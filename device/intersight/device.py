@@ -18,12 +18,15 @@ from intersight import __version__ as intersight_sdk_version
 from intersight.api.access_api import AccessApi
 from intersight.api.adapter_api import AdapterApi
 from intersight.api.appliance_api import ApplianceApi
+from intersight.api.auditd_api import AuditdApi
 from intersight.api.bios_api import BiosApi
 from intersight.api.boot_api import BootApi
 from intersight.api.certificatemanagement_api import CertificatemanagementApi
 from intersight.api.chassis_api import ChassisApi
+from intersight.api.comm_api import CommApi
 from intersight.api.compute_api import ComputeApi
 from intersight.api.deviceconnector_api import DeviceconnectorApi
+from intersight.api.equipment_api import EquipmentApi
 from intersight.api.fabric_api import FabricApi
 from intersight.api.fcpool_api import FcpoolApi
 from intersight.api.firmware_api import FirmwareApi
@@ -35,9 +38,11 @@ from intersight.api.kvm_api import KvmApi
 from intersight.api.license_api import LicenseApi
 from intersight.api.macpool_api import MacpoolApi
 from intersight.api.memory_api import MemoryApi
+from intersight.api.network_api import NetworkApi
 from intersight.api.networkconfig_api import NetworkconfigApi
 from intersight.api.ntp_api import NtpApi
 from intersight.api.organization_api import OrganizationApi
+from intersight.api.pool_api import PoolApi
 from intersight.api.power_api import PowerApi
 from intersight.api.resource_api import ResourceApi
 from intersight.api.resourcepool_api import ResourcepoolApi
@@ -75,7 +80,7 @@ urllib3.disable_warnings()
 
 
 class IntersightDevice(GenericDevice):
-    INTERSIGHT_APPLIANCE_MIN_REQUIRED_VERSION = "1.1.5-0"
+    INTERSIGHT_APPLIANCE_MIN_REQUIRED_VERSION = "1.1.6-0"
 
     def __init__(self, parent=None, uuid=None, target="us-east-1.intersight.com", key_id="", private_key_path="",
                  is_hidden=False, is_system=False, system_usage=None, proxy=None, proxy_user=None, proxy_password=None,
@@ -181,7 +186,8 @@ class IntersightDevice(GenericDevice):
         self.report_manager = IntersightReportManager(parent=self)
         self.delete_summary_manager = DeleteSummaryManager(parent=self)
 
-    def clear_config(self, orgs=None, delete_settings=False, bypass_version_checks=False, force=False):
+    def clear_config(self, orgs=None, delete_settings=False, bypass_version_checks=False, force=False,
+                     delete_path_tags=False, delete_equipment_tags_and_labels=False):
         """
         Clears configuration by deleting objects from the Intersight device
         (optionally limited to the list of orgs provided).
@@ -194,6 +200,11 @@ class IntersightDevice(GenericDevice):
             delete everything.
             bypass_version_checks(boolean): Whether the minimum version checks should be bypassed when connecting
             delete_settings (boolean): If enabled, then we also delete all the settings associated with the
+            Intersight account. This cannot be True if 'orgs' is specified.
+            delete_path_tags (boolean): If enabled, then we also delete all path tags under tags section of system in
+            Intersight.
+            delete_equipment_tags_and_labels (boolean): If enabled, then we also delete all asset tags, user labels, and
+            tags(including path tags) from servers, fabric interconnects, and chassis
             Intersight account. This cannot be True if 'orgs' is specified.
             force (boolean): Force the clear process to proceed even if license validation fails.
 
@@ -272,7 +283,8 @@ class IntersightDevice(GenericDevice):
                          "fabric_link_control_policy", "fabric_mac_sec_policy", "fabric_switch_control_policy",
                          "fabric_system_qos_policy", "fabric_eth_network_policy",  "fabric_fc_network_policy",
                          "fabric_multicast_policy", "fabric_eth_network_group_policy",
-                         "fabric_eth_network_control_policy", "fabric_fc_zone_policy"]},
+                         "fabric_eth_network_control_policy", "fabric_fc_zone_policy",
+                         "fabric_port_operation", "fabric_pc_operation"]},
             {NtpApi: ["ntp_policy"]},
             {SnmpApi: ["snmp_policy"]},
             {SyslogApi: ["syslog_policy"]},
@@ -292,8 +304,10 @@ class IntersightDevice(GenericDevice):
             {BiosApi: ["bios_policy"]},
             {StorageApi: ["storage_storage_policy", "storage_drive_security_policy"]},
             {ThermalApi: ["thermal_policy"]},
+            {AuditdApi: ["auditd_policy"]},
             {PowerApi: ["power_policy"]},
-            {ComputeApi: ["compute_scrub_policy"]},
+            {ComputeApi: ["compute_scrub_policy", "compute_pcie_connectivity_policy", "compute_server_setting",
+                          "compute_blade", "compute_rack_unit"]},
             {DeviceconnectorApi: ["deviceconnector_policy"]},
             {AdapterApi: ["adapter_config_policy"]},
             {IppoolApi: ["ippool_reservation", "ippool_pool"]},
@@ -303,12 +317,17 @@ class IntersightDevice(GenericDevice):
             {UuidpoolApi: ["uuidpool_reservation", "uuidpool_pool"]},
             {ResourcepoolApi: ["resourcepool_membership_reservation", "resourcepool_pool",
                                "resourcepool_qualification_policy"]},
+            {PoolApi: ["pool_id_mapping_policy"]},
             {IamApi: ["iam_user_group", "iam_user", "iam_end_point_user_policy", "iam_end_point_user",
                       "iam_permission", "iam_ldap_policy", "iam_sharing_rule"]},
-            {OrganizationApi: ["organization_organization"]}
+            {OrganizationApi: ["organization_organization"]},
+            {NetworkApi: ["network_element"]},
+            {EquipmentApi: ["equipment_chassis", "equipment_fex"]}
         ]
 
         settings_sdk_objects = ["iam_user_group", "iam_user",  "iam_permission"]
+        equipment_sdk_objects = ["equipment_chassis", "equipment_fex", "network_element", "compute_server_setting",
+                                 "fabric_port_operation", "fabric_pc_operation"]
 
         # A set containing moid of all the organizations to be deleted
         orgs_to_be_deleted = set()
@@ -335,6 +354,7 @@ class IntersightDevice(GenericDevice):
         else:
             # We delete the resource groups only when we are deleting all the Intersight configuration.
             objects_to_remove_in_order.append({ResourceApi: ["resource_group"]})
+            objects_to_remove_in_order.append({CommApi: ["comm_tag_definition"]})
 
             # Added to handle cases of orphaned objects that need to be deleted.
             # By adding these sdk_objects to specific positions in the objects_to_remove_in_order list,
@@ -378,13 +398,22 @@ class IntersightDevice(GenericDevice):
 
         last_organization = None
         error_encountered = False
+        default_rg_descr = ("The Default Resource Group automatically groups all the resources of a User Account. "
+                            "A user with Account Administrator privilege can remove resources from the Default "
+                            "Resource Group when required.")
+
         for api_class_dict in objects_to_remove_in_order:
             for api_class, sdk_objects_list in api_class_dict.items():
                 api = api_class(api_client=self.handle)
 
                 for sdk_object in sdk_objects_list:
-                    # If "delete_settings" is not set, then skip the deletion of settings objects
+                    # If "delete_settings", "delete_equipment_tags_and_labels" and "delete_path_tags" is not set,
+                    # then skip the deletion of those objects
                     if not delete_settings and sdk_object in settings_sdk_objects:
+                        continue
+                    if not delete_equipment_tags_and_labels and sdk_object in equipment_sdk_objects:
+                        continue
+                    if not delete_path_tags and sdk_object in ["comm_tag_definition"]:
                         continue
 
                     # Retrieve the objects for the current object class
@@ -564,38 +593,280 @@ class IntersightDevice(GenericDevice):
                                 # ignore the private-catalog org during org clearing when an Appliance device is used.
                                 if self.is_appliance:
                                     org_objects = [org for org in org_objects if org.name != "private-catalog"]
-                                if len(org_objects) == 1:
-                                    # "obj" is the last organization which is being deleted
-                                    last_organization = obj
-                                    if org_objects[0].name != "default":
-                                        self.logger(level="info", message=f"Renaming the last organization "
-                                                                          f"'{org_objects[0].name}' to 'default'")
-                                        last_organization = api.patch_organization_organization(
-                                            moid=org_objects[0].moid,
-                                            organization_organization={"name": "default"}
-                                        )
+
+                                # Find default org (if exists)
+                                default_org = next((org for org in org_objects if org.name == "default"), None)
+
+                                if default_org and obj.moid == default_org.moid:
+                                    last_organization = default_org
+                                    self.logger(level="info",
+                                                message="Skipping deletion of 'default' organization")
+                                    self.delete_summary_manager.add_obj_status(obj=obj, status="skipped")
+                                    continue
+
+                                if not default_org and len(org_objects) == 1:
+                                    default_org_descr = ("User in a Default Organization automatically has access to "
+                                                         "all the resources available for the User Account. "
+                                                         "If required, a User with Account Administrator privileges "
+                                                         "can remove resources from the default organization.")
+                                    self.logger(level="info", message=f"Renaming the last organization "
+                                                                      f"'{obj.name}' to 'default'")
+                                    last_organization = api.patch_organization_organization(
+                                        moid=org_objects[0].moid,
+                                        organization_organization={"name": "default",
+                                                                   "description": default_org_descr
+                                                                   }
+                                    )
+                                    self.delete_summary_manager.add_obj_status(
+                                        obj=obj, status="skipped", message=f"Renamed organization '{obj.name}' to "
+                                                                           f"'default' organization")
                                     continue
                             elif sdk_object == "resource_group":
-                                # If the resource group to be deleted belongs to the last organization in the
-                                # Intersight account, then we don't delete that resource group. Rather, we rename
-                                # that resource group to "default". This is done to deliver a factory reset
-                                # environment to the user.
+                                # If the resource group to be deleted is the "default" resource group,
+                                # then we don't delete that resource group. We check if its membership is 'Allow-All'.
+                                # If not, we update it to 'Allow-All' so it includes all resources,
+                                # as expected in a factory reset state.
+                                #
+                                # All other resource groups will be deleted.
+                                # If a resource group is attached to the last organization ("default"), we detach it
+                                # before deleting.
+                                #
+                                # If the "default" resource group does not exist, it will be created later
+                                # and attached to the default organization.
+
+                                rg_objects = self.query(api_class=ResourceApi, sdk_object_type="resource_group",
+                                                        filter=query_filters.get("resource_group", ""))
+                                # Find default RG (if exists)
+                                default_rg = next((rg for rg in rg_objects if rg.name == "default"), None)
 
                                 if last_organization is None:
-                                    # This indicates that one or more organizations failed to delete,
-                                    # which may impact deletion of resource group associated with these organizations.
-                                    self.logger(level="warning",
-                                                message="Deletion of some organizations failed, "
-                                                        "which may prevent removal of associated resource groups.")
-                                if last_organization and any([org_moref.moid == last_organization.moid
-                                                              for org_moref in obj.organizations]):
-                                    # "obj" is the resource group belonging to the last organization 'default'
-                                    if obj.name != "default":
+                                    self.logger(
+                                        level="warning",
+                                        message="Deletion of some organizations failed, "
+                                                "which may prevent removal of associated resource groups.")
+
+                                # Skip deletion for "default" RG and ensure membership is 'Allow-All'
+                                if default_rg and obj.moid == default_rg.moid:
+                                    self.logger(
+                                        level="debug",
+                                        message="Skipping deletion of 'default' resource group"
+                                    )
+                                    message = None
+                                    if getattr(default_rg, "qualifier") != "Allow-All":
                                         self.logger(level="info",
-                                                    message=f"Renaming the resource group '{obj.name}' attached to "
-                                                            f"'default' organization to 'default'")
-                                        api.patch_resource_group(moid=obj.moid, resource_group={"name": "default"})
+                                                    message=f"Updating membership of default RG to 'Allow-All'")
+                                        api.patch_resource_group(
+                                            moid=default_rg.moid,
+                                            resource_group={
+                                                "description": default_rg_descr,
+                                                "qualifier": "Allow-All"
+                                            }
+                                        )
+                                        message = ("Updated default resource group membership to 'Allow-All' to "
+                                                   "ensure factory reset state")
+
+                                    self.delete_summary_manager.add_obj_status(obj=obj, status="skipped",
+                                                                               message=message)
                                     continue
+
+                                # Check if RG is attached to last organization
+                                last_org_rgs = getattr(last_organization, "resource_groups", [])
+
+                                if len(last_org_rgs) > 0:
+                                    last_org_rg_moids = [rg.moid for rg in last_org_rgs]
+
+                                    if obj.moid in last_org_rg_moids:
+                                        # Detach RG from last organization before deletion
+                                        self.logger(
+                                            level="info",
+                                            message=f"Detaching Resource Group '{obj.name}' from organization 'default'"
+                                        )
+
+                                        updated_rgs = [
+                                            MoMoRef(
+                                                moid=rg.moid,
+                                                class_id="mo.MoRef",
+                                                object_type=rg.object_type
+                                            )
+                                            for rg in last_org_rgs if rg.moid != obj.moid
+                                        ]
+
+                                        last_organization = OrganizationApi(
+                                            api_client=self.handle
+                                        ).patch_organization_organization(
+                                            moid=last_organization.moid,
+                                            organization_organization=OrganizationOrganization(
+                                                resource_groups=updated_rgs if updated_rgs else None
+                                            )
+                                        )
+                                        # Fall through to deletion after detachment
+                            elif sdk_object == "fabric_port_operation":
+                                if obj.user_label:
+                                    port_info = ""
+                                    if getattr(obj, "slot_id") is not None:
+                                        port_info = f"{obj.slot_id}"
+                                    if getattr(obj, "aggregate_port_id") not in [None, 0]:  # We have a breakout port
+                                        port_info = f"{port_info}/{obj.aggregate_port_id}/{obj.port_id}"
+                                    else:
+                                        port_info = f"{port_info}/{obj.port_id}"
+                                    self.logger(level="info",
+                                                message=f"Deleting User label on Port {port_info} with "
+                                                        f"(MOID {obj.moid})")
+                                    api.patch_fabric_port_operation(moid=obj.moid,
+                                                                    fabric_port_operation={"admin_action":"SetUserLabel",
+                                                                                           "user_label":""})
+                                    time.sleep(3)
+                                    self.delete_summary_manager.add_obj_status(
+                                        obj=obj, status="success", obj_name=port_info,
+                                        message=f"User Label '{obj.user_label}' deleted from port '{port_info}'")
+                                continue
+                            elif sdk_object == "fabric_pc_operation":
+                                if obj.user_label:
+                                    self.logger(level="info", message=f"Delete User label on Port Channel "
+                                                                      f"{obj.pc_id} with (MOID {obj.moid})")
+                                    api.patch_fabric_pc_operation(moid=obj.moid,
+                                                                  fabric_pc_operation={"admin_action": "SetUserLabel",
+                                                                                       "user_label": ""})
+                                    time.sleep(3)
+                                    self.delete_summary_manager.add_obj_status(
+                                        obj=obj, status="success", obj_name=obj.pc_id,
+                                        message=f"User Label '{obj.user_label}' deleted from port channel "
+                                                f"'{obj.pc_id}'")
+                                continue
+                            elif sdk_object == "compute_server_setting":
+                                if obj.server_config and (obj.server_config.user_label or obj.server_config.asset_tag):
+                                    self.logger(level="info", message=f"Deleting User label, Asset Tag on Server with "
+                                                                      f"name {obj.name} (MOID {obj.moid})")
+                                    api.patch_compute_server_setting(moid=obj.moid,
+                                                                     compute_server_setting={
+                                                                         "server_config":{"asset_tag":"",
+                                                                                          "user_label":""}}
+                                                                     )
+                                    time.sleep(3)
+                                    message = ""
+                                    if obj.server_config.user_label:
+                                        message += f"User Label '{obj.server_config.user_label}' "
+                                    if obj.server_config.asset_tag:
+                                        if message:
+                                            message += "and "
+                                        message += f"Asset Tag '{obj.server_config.asset_tag}' "
+                                    message += f"deleted from server '{obj.name}'"
+                                    self.delete_summary_manager.add_obj_status(obj=obj, status="success",
+                                                                               message=message)
+                                continue
+                            elif sdk_object == "network_element":
+                                if obj.user_label or obj.tags:
+                                    self.logger(level="info", message=f"Deleting User label and Tags on "
+                                                                      f"Fabric Interconnect with Serial Number "
+                                                                      f"{obj.serial} (MOID {obj.moid})")
+                                    api.patch_network_element(moid=obj.moid,
+                                                              network_element={"user_label": "",
+                                                                               "tags": []})
+                                    message = ""
+                                    if obj.user_label:
+                                        message += f"User Label '{obj.user_label}' "
+                                    if obj.tags:
+                                        tags_info = []
+                                        for tag in obj.tags:
+                                            if getattr(tag, "value", None):
+                                                tags_info.append(f"{tag.key}:{tag.value}")
+                                            else:
+                                                tags_info.append(f"{tag.key}")
+                                        if message:
+                                            message += "and "
+                                        message += f"Tags ({', '.join(tags_info)}) "
+                                    message += f"deleted from Fabric Interconnect '{obj.serial}'"
+                                    self.delete_summary_manager.add_obj_status(obj=obj, status="success",
+                                                                               message=message,
+                                                                               obj_name=f"{obj.serial}_{obj.switch_id}")
+                                continue
+                            elif sdk_object == "equipment_chassis":
+                                if obj.user_label or obj.tags:
+                                    self.logger(level="info", message=f"Deleting User label and Tags on Chassis with "
+                                                                      f"name {obj.name} (MOID {obj.moid})")
+                                    api.patch_equipment_chassis(moid=obj.moid,
+                                                                equipment_chassis={"user_label": "",
+                                                                                   "tags": []})
+                                    message = ""
+                                    if obj.user_label:
+                                        message += f"User Label '{obj.user_label}' "
+                                    if obj.tags:
+                                        tags_info = []
+                                        for tag in obj.tags:
+                                            if getattr(tag, "value", None):
+                                                tags_info.append(f"{tag.key}:{tag.value}")
+                                            else:
+                                                tags_info.append(f"{tag.key}")
+                                        if message:
+                                            message += "and "
+                                        message += f"Tags ({', '.join(tags_info)}) "
+                                    message += f"deleted from Chassis '{obj.name}'"
+                                    self.delete_summary_manager.add_obj_status(obj=obj, status="success",
+                                                                               message=message)
+                                continue
+                            elif sdk_object == "equipment_fex":
+                                if obj.tags:
+                                    self.logger(level="info", message=f"Deleting Tags on FEX with Serial Number"
+                                                                      f"{obj.serial} (MOID {obj.moid})")
+                                    api.patch_equipment_fex(moid=obj.moid, equipment_fex={"tags": []})
+
+                                    tags_info = []
+                                    for tag in obj.tags:
+                                        if getattr(tag, "value", None):
+                                            tags_info.append(f"{tag.key}:{tag.value}")
+                                        else:
+                                            tags_info.append(f"{tag.key}")
+                                    message = f"Tags ({','.join(tags_info)}) deleted from FEX '{obj.serial}'"
+                                    self.delete_summary_manager.add_obj_status(
+                                        obj=obj, status="success", message=message,
+                                        obj_name=f"{obj.serial}_{obj.connection_path}")
+                                continue
+                            elif sdk_object in ["compute_blade", "compute_rack_unit"]:
+                                if obj.tags:
+                                    preserved_tags = [
+                                        tag for tag in obj.tags
+                                        if getattr(tag, "key", None) == "Intersight.LicenseTier"
+                                    ]
+                                    removable_tags = [
+                                        tag for tag in obj.tags
+                                        if getattr(tag, "key", None) != "Intersight.LicenseTier"
+                                    ]
+
+                                    # Proceed ONLY if there are tags to remove
+                                    if removable_tags:
+                                        self.logger(level="info", message=f"Deleting Tags on Server with name "
+                                                                          f"{obj.name} (MOID {obj.moid})")
+                                        if sdk_object == "compute_blade":
+                                            api.patch_compute_blade(
+                                                moid=obj.moid,
+                                                compute_blade={"tags": preserved_tags}
+                                            )
+                                        elif sdk_object == "compute_rack_unit":
+                                            api.patch_compute_rack_unit(
+                                                moid=obj.moid,
+                                                compute_rack_unit={"tags": preserved_tags}
+                                            )
+                                        tags_info = []
+                                        for tag in removable_tags:
+                                            if getattr(tag, "value", None):
+                                                tags_info.append(f"{tag.key}:{tag.value}")
+                                            else:
+                                                tags_info.append(f"{tag.key}")
+
+                                        message = f"Tags ({', '.join(tags_info)}) deleted from Server '{obj.name}'"
+
+                                        self.delete_summary_manager.add_obj_status(
+                                            obj=obj,
+                                            status="success",
+                                            message=message
+                                        )
+                                continue
+                            elif sdk_object == "comm_tag_definition":
+                                self.logger(level="info", message=f"Deleting Path Tags with (MOID {obj.moid})")
+                                api.delete_comm_tag_definition(moid=obj.moid)
+                                self.delete_summary_manager.add_obj_status(obj=obj, status="success", obj_name=obj.key,
+                                                                           message=f"Deleted Path Tag '{obj.key}'")
+                                continue
 
                             if getattr(obj, "name", None):
                                 self.logger(level="info", message=f"Deleting {obj.object_type} with name {obj.name} "
@@ -663,7 +934,8 @@ class IntersightDevice(GenericDevice):
                 else:
                     self.logger(level="info", message=f"Creating a resource group with name 'default'")
                     response = ResourceApi(api_client=self.handle).create_resource_group(
-                        resource_group=ResourceGroup(name="default"))
+                        resource_group=ResourceGroup(name="default", description=default_rg_descr,
+                                                     qualifier="Allow-All"))
                 if response:
                     OrganizationApi(api_client=self.handle).patch_organization_organization(
                         moid=last_organization.moid,

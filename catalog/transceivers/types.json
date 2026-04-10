@@ -4,6 +4,7 @@
    "h10gcu2m": {"sku": "SFP-H10GB-CU2M"},
    "h10gcu2-5m": {"sku": "SFP-H10GB-CU2-5M"},
    "h10gcu3m": {"sku": "SFP-H10GB-CU3M"},
+   "sfph10gbcu4m": {"sku": "SFP-H10GB-CU4M"},
    "h10gcu5m": {"sku": "SFP-H10GB-CU5M"},
    "h10gacu7m": {"sku": "SFP-H10GB-ACU7M"},
    "h10gacu10m": {"sku": "SFP-H10GB-ACU10M"},
@@ -35,9 +36,13 @@
    "h25gaoc7m": {"sku": "SFP-25G-AOC7M"},
    "h25gaoc10m": {"sku": "SFP-25G-AOC10M"},
 
+   "sfp50gcu3m": {"sku": "SFP-50G-CU3M"},
+   "sfp50gcu5m": {"sku": "SFP-50G-CU5M"},
+
    "qsfph40gcu1m": {"sku": "QSFP-H40G-CU1M"},
    "qsfph40gcu2m": {"sku": "QSFP-H40G-CU2M"},
    "qsfph40gcu3m": {"sku": "QSFP-H40G-CU3M"},
+   "qsfph40gcu4m": {"sku": "QSFP-H40G-CU4M"},
    "qsfph40gcu5m": {"sku": "QSFP-H40G-CU5M"},
    "qsfph40gacu7m": {"sku": "QSFP-H40G-ACU7M"},
    "qsfph40gacu10m": {"sku": "QSFP-H40G-ACU10M"},
@@ -48,6 +53,9 @@
    "qsfph40gaoc7m": {"sku": "QSFP-H40G-AOC7M"},
    "qsfph40gaoc10m": {"sku": "QSFP-H40G-AOC10M"},
    "qsfph40gaoc15m": {"sku": "QSFP-H40G-AOC15M"},
+   "qsfph40gaoc20m": {"sku": "QSFP-H40G-AOC20M"},
+   "qsfph40gaoc25m": {"sku": "QSFP-H40G-AOC25M"},
+   "qsfph40gaoc30m": {"sku": "QSFP-H40G-AOC30M"},
 
    "qsfp4sfp10gcu1m": {"sku": "QSFP-4SFP10G-CU1M"},
    "qsfp4sfp10gcu2m": {"sku": "QSFP-4SFP10G-CU2M"},
@@ -82,6 +90,13 @@
    "qsfp4sfp25gcu3m": {"sku": "QSFP-4SFP25G-CU3M"},
    "qsfp4sfp25gcu5m": {"sku": "QSFP-4SFP25G-CU5M"},
 
+   "qsfpdd400gcu1m": {"sku": "QDD-400-CU1M"},
+   "qsfpdd400gcu2m": {"sku": "QDD-400-CU2M"},
+   "qsfpdd400gcu3m": {"sku": "QDD-400-CU3M"},
+   "qsfpdd400gaoc1m": {"sku": "QDD-400-AOC1M"},
+   "qsfpdd400gaoc2m": {"sku": "QDD-400-AOC2M"},
+   "qsfpdd400gaoc3m": {"sku": "QDD-400-AOC3M"},
+
    "1000baset": {"sku": "GLC-T/TE|SFP-GE-T"},
    "1000basesx": {"sku": "GLC-SX-MM/MMD"},
    "1000baselh": {"sku": "GLC-LH-SM/SMD"},
@@ -94,6 +109,7 @@
 
    "10gbasesr": {"sku": "SFP-10G-SR/SR-S"},
    "10gbaselr": {"sku": "SFP-10G-LR/LR-S"},
+   "10gbaselrm": {"sku": "SFP-10G-LRM"},
    "10gbaseer": {"sku": "SFP-10G-ER/ER-S"},
 
    "h25gsrs": {"sku": "SFP-25G-SR-S"},
@@ -101,6 +117,9 @@
    "h25glrs": {"sku": "SFP-10/25G-LR-S"},
    "10/25Gbaselrs": {"sku": "SFP-10/25G-LR-S"},
    "sfp25gsl": {"sku": "SFP-25G-SL"},
+
+   "sfp50gsrs": {"sku": "SFP-50G-SR-S"},
+   "sfp50gsl": {"sku": "SFP-50G-SL"},
 
    "qsfpqsa": {"sku": "CVR-QSFP-SFP10G"},
    "qsfp40gfet": {"sku": "FET-40G"},
@@ -113,6 +132,9 @@
    "qsfp40glr4": {"sku": "QSFP-40G-LR4/LR4-S"},
    "qsfp40glr4s": {"sku": "QSFP-40G-LR4-S"},
 
+   "qsfp4x10glr": {"sku": "QSFP-4X10G-LR-S"},
+   "qsfp4x10glrs": {"sku": "QSFP-4X10G-LR-S"},
+
    "qsfp100gsl4": {"sku": "QSFP-100G-SL4"},
    "qsfp100g40gbidi": {"sku": "QSFP-40/100-SRBD"},
    "qsfp100gsmsr": {"sku": "QSFP-100G-SM-SR"},
@@ -122,6 +144,7 @@
    "qsfp100gsr4s": {"sku": "QSFP-100G-SR4-S"},
    "qsfp100glr4s": {"sku": "QSFP-100G-LR4-S"},
    "qsfp100glrs": {"sku": "QSFP-100G-LR-S"},
+   "qsfp100gerls": {"sku": "QSFP-100G-ERL-S"},
    "qsfp100ger4ls": {"sku": "QSFP-100G-ER4L-S"},
    "qsfp100gdr": {"sku": "QSFP-100G-DR-S"},
    "qsfp100gdrs": {"sku": "QSFP-100G-DR-S"},
@@ -129,11 +152,27 @@
    "qsfp100gfrs": {"sku": "QSFP-100G-FR-S"},
    "qsfp100gpsm4": {"sku": "QSFP-100G-PSM4-S"},
    "qsfp100gpsm4s": {"sku": "QSFP-100G-PSM4-S"},
+   "qsfp100gzr4s": {"sku": "QSFP-100G-ZR4-S"},
+
+   "qsfpdd400gdr4": {"sku": "QDD-400G-DR4-S"},
+   "qsfpdd400gfr4": {"sku": "QDD-400G-FR4-S"},
+   "qsfpdd400glr4": {"sku": "QDD-400G-LR4-S"},
+   "qsfpdd400glr8": {"sku": "QDD-400G-LR8-S"},
+   "qsfpdd400gzrps": {"sku": "QDD-400G-ZRP-S"},
+   "qsfpdd400gzrs": {"sku": "QDD-400G-ZR-S"},
+
+   "qdd2x100gcwdm4s": {"sku": "QDD-2X100-CWDM4-S"},
+   "qdd2x100glr4s": {"sku": "QDD-2X100-LR4-S"},
+   "qsfpdd4x100gfr": {"sku": "QDD-4X100G-FR-S"},
+   "qsfpdd4x100glrs": {"sku": "QDD-4X100G-LR-S"},
 
    "dssfpfc16gsw": {"sku": "DS-SFP-FC16G-SW"},
    "dssfpfc16glw": {"sku": "DS-SFP-FC16G-LW"},
    "dssfpfc32gsw": {"sku": "DS-SFP-FC32G-SW"},
    "dssfpfc32glw": {"sku": "DS-SFP-FC32G-LW"},
    "dssfpfc64gsw": {"sku": "DS-SFP-FC64G-SW"},
-   "dssfpfc64glw": {"sku": "DS-SFP-FC64G-LW"}
+   "dssfpfc64glw": {"sku": "DS-SFP-FC64G-LW"},
+
+   "4x32gsw": {"sku": "DS-SFP-4X32G-SW"},
+   "qsfponsqc4x32glw": {"sku": "ONS-QC-4X32G-LW"}
 }

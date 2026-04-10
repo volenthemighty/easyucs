@@ -8,7 +8,7 @@ from report.content_table import GenericReportTable
 
 class UcsReportTable(GenericReportTable):
     def __init__(self, order_id, parent, row_number, column_number, centered=False, cells_list=[],
-                 style="Light Grid Accent 1", autofit=True, font_size=10):
+                 style="Light Grid Accent 1", autofit=True, font_size=10, clean_empty_rows=True):
         """
         :param order_id:
         :param parent:
@@ -19,11 +19,12 @@ class UcsReportTable(GenericReportTable):
         :param style:
         :param autofit:
         :param font_size:
+        :param clean_empty_rows:
         """
 
         GenericReportTable.__init__(self, order_id=order_id, parent=parent, row_number=row_number,
                                     column_number=column_number, centered=centered, cells_list=cells_list, style=style,
-                                    autofit=autofit, font_size=font_size)
+                                    autofit=autofit, font_size=font_size, clean_empty_rows=clean_empty_rows)
 
     @staticmethod
     def get_name_and_sku(inventory_object):

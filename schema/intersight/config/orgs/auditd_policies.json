@@ -1,0 +1,84 @@
+{
+   "id": "intersight_config_orgs_auditd_policies#",
+   "$schema": "http://json-schema.org/draft-07/schema#",
+   "title": "EasyUCS intersight config orgs auditd_policies section",
+   "description": "EasyUCS intersight config orgs auditd_policies section JSON schema",
+   "type": "object",
+   "properties": {
+      "comment": {
+         "description": "AuditD Policy Comments",
+         "type": "string",
+         "default": ""
+      },
+      "descr": {
+         "description": "AuditD Policy Description",
+         "type": "string",
+         "default": "",
+         "pattern": "^$|^[a-zA-Z0-9]+[\\x00-\\xFF]*$",
+         "maxLength": 1024
+      },
+      "name": {
+         "description": "AuditD Policy Name",
+         "type": "string",
+         "default": "",
+         "pattern": "^[a-zA-Z0-9_.:-]{1,64}$"
+      },
+      "tags": {
+         "description": "AuditD Policy Tags",
+         "type": "array",
+         "items": {
+            "description": "AuditD Policy Tag",
+            "type": "object",
+            "properties": {
+               "key": {
+                  "description": "AuditD Policy Tag Key",
+                  "type": "string",
+                  "default": "",
+                  "minLength": 1,
+                  "maxLength": 128
+               },
+               "value": {
+                  "description": "AuditD Policy Tag Value",
+                  "type": "string",
+                  "default": "",
+                  "minLength": 0,
+                  "maxLength": 256
+               }
+            },
+            "additionalProperties": false,
+            "required": [
+               "key"
+            ]
+         },
+         "minItems": 1
+      },
+      "admin_state": {
+         "description": "AuditD Policy Admin State",
+         "type": "string",
+         "default": "Disabled",
+         "enum": [
+            "Disabled",
+            "Enabled"
+         ]
+      },
+      "minimum_severity_to_report": {
+         "description": "The log level for the AuditD feature. The default value is \"notifications\". * `notifications` - Generated logs are of Notification level, providing information about normal but significant system events requiring awareness. * `emergencies` - Generated logs will be of Emergency log level, indicating a critical and unstable system state. * `alerts` - Generated logs are of Alert level, indicating critical issues needing immediate attention to prevent system disruption. * `critical` - Generated logs are of Critical level, signaling severe issues that may cause system failure if not addressed immediately. * `errors` - Generated logs are of Error level, indicating significant problems that affect functionality but do not cause system failure. * `warnings` - Generated logs are of Warning level, highlighting potential issues that require attention but do not yet impact functionality. * `information` - Generated logs are of Information level, detailing routine operational messages without indicating any issues or errors. * `debugging` - Generated logs are of Debugging level, providing detailed information to help diagnose and troubleshoot system issues",
+         "type": "string",
+         "default": "Notification",
+         "enum": [
+            "Emergency",
+            "Alert",
+            "Critical",
+            "Error",
+            "Warning",
+            "Notification",
+            "Information",
+            "Debugging"
+         ]
+      }
+   },
+   "additionalProperties": false,
+   "required": [
+      "name"
+   ]
+}

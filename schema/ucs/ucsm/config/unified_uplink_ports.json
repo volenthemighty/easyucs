@@ -60,7 +60,10 @@
             "10gbps",
             "25gbps",
             "40gbps",
+            "50gbps",
             "100gbps",
+            "200gbps",
+            "400gbps",
             "auto"
          ]
       },

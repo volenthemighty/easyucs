@@ -69,7 +69,12 @@
          "enum": [
             "1gbps",
             "10gbps",
-            "40gbps"
+            "25gbps",
+            "50gbps",
+            "40gbps",
+            "100gbps",
+            "200gbps",
+            "400gbps"
          ]
       },
       "admin_state": {

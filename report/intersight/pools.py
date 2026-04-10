@@ -181,11 +181,11 @@ class IntersightIpPoolIpv4ConfigReportTable(UcsReportTable):
 class IntersightIpPoolIpv4BlocksReportTable(UcsReportTable):
     def __init__(self, order_id, parent, ipv4_blocks, centered=False):
 
-        rows = [["ID", "From", "To", "Size"]]
+        rows = [["ID", "From", "To", "Size", "ID Mapping Policy"]]
 
         for block_num, block in enumerate(ipv4_blocks):
             size = (int(ipaddress.IPv4Address(block["to"])) - int(ipaddress.IPv4Address(block["from"])) + 1)
-            rows.append([block_num + 1, block["from"], block["to"], size])
+            rows.append([block_num + 1, block["from"], block["to"], size, block.get("id_mapping_policy")])
 
         UcsReportTable.__init__(
             self,
@@ -226,11 +226,11 @@ class IntersightIpPoolIpv6ConfigReportTable(UcsReportTable):
 class IntersightIpPoolIpv6BlocksReportTable(UcsReportTable):
     def __init__(self, order_id, parent, ipv6_blocks, centered=False):
 
-        rows = [["ID", "From", "To", "Size"]]
+        rows = [["ID", "From", "To", "Size", "ID Mapping Policy"]]
 
         for block_num, block in enumerate(ipv6_blocks):
             size = (int(ipaddress.IPv6Address(block["to"])) - int(ipaddress.IPv6Address(block["from"])) + 1)
-            rows.append([block_num + 1, block["from"], block["to"], size])
+            rows.append([block_num + 1, block["from"], block["to"], size, block.get("id_mapping_policy")])
 
         UcsReportTable.__init__(
             self,
@@ -512,6 +512,7 @@ class IntersightResourcePoolReportTable(UcsReportTable):
             ["Description", "Value"],
             ["Name", resource_pool.name],
             ["Description", resource_pool.descr],
+            ["Target Platform", resource_pool.target_platform],
             ["Organization", resource_pool._parent.name]
         ]
         if resource_pool.server_pool_qualification_policies:

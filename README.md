@@ -30,7 +30,7 @@ Minimum versions of UCS devices :
 * UCS Manager: ***3.2(1d)*** or above
 * UCS IMC: ***3.0(1c)*** or above
 * UCS Central: ***2.0(1a)*** or above
-* Intersight SaaS ***(no prerequisite)*** & Appliance: ***1.1.5-0*** or above
+* Intersight SaaS ***(no prerequisite)*** & Appliance: ***1.1.6-0*** or above
 
 This tool requires ***Python 3.9+*** to work. *Python 2.x* is not supported.
 
@@ -153,6 +153,17 @@ python easyucs.py device reset_device_connector -t ucsm -i 192.168.0.1 -u admin 
 
 
 ## Versioning
+
+### 1.0.6
+* Bump up minimum Intersight Appliance required version to 1.1.6-0
+* Added support for Intersight Unified Edge policies/profiles/templates
+* Added support for Intersight ID Mapping Policy & PCIe Connectivity Policy
+* Added support for AuditD Policy in UCS Manager & Intersight
+* Added support for QinQ in Intersight Ethernet Network Policy
+* Added support for IPMI user accounts in Intersight Local User Policy
+* Added support for Intersight Path Tags
+* Added support for UCS X410c M8 server
+* Miscellaneous bug fixes and improvements
 
 ### 1.0.5
 * Bump up minimum Intersight Appliance required version to 1.1.5-0

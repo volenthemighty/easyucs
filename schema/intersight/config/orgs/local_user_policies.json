@@ -112,6 +112,35 @@
                   "description": "Local User Policy - Local User - Username",
                   "type": "string",
                   "default": ""
+               },
+               "choose_custom_account_types": {
+                  "description": "Local User Policy - Local User - Allows to choose custom account types for the endpoint user",
+                  "type": "boolean",
+                  "default": false
+               },
+               "account_types": {
+                  "description": "Local User Policy - Local User - Type of account to be created on the endpoint. localUser - Creates a local user on the endpoint. IPMIUser - Creates an IPMI user on the endpoint. ",
+                  "type": "array",
+                  "items": {
+                     "type": "string",
+                     "enum": [
+                        "Local",
+                        "IPMI"
+                     ]
+                  }
+               },
+               "use_different_ipmi_password": {
+                  "description": "Local User Policy - Local User - Use Different IPMI Password. If false then same Local User Password will be used for IPMI",
+                  "type": "boolean",
+                  "default": true
+               },
+               "ipmi_password": {
+                  "description": "Local User Policy - Local User - IPMI Password",
+                  "type": "string",
+                  "default": "",
+                  "minLength": 8,
+                  "maxLength": 20,
+                  "pattern": "^$|^[a-zA-Z0-9!@#$%^&\\*+-_=]+$"
                }
             },
             "additionalProperties": false

@@ -40,7 +40,8 @@ from config.ucs.ucsm.admin import (
     UcsSystemInformation, UcsSystemKmipCertificationPolicy, UcsSystemLdap, UcsSystemLocalUser,
     UcsSystemLocalUsersProperties, UcsSystemLocale, UcsSystemManagementInterface, UcsSystemOrg,
     UcsSystemPortAutoDiscoveryPolicy, UcsSystemPowerGroup, UcsSystemPreLoginBanner, UcsSystemRadius, UcsSystemRole,
-    UcsSystemSelPolicy, UcsSystemSwitchingMode, UcsSystemSyslog, UcsSystemTacacs, UcsSystemTimezoneMgmt
+    UcsSystemSelPolicy, UcsSystemSwitchingMode, UcsSystemSyslog, UcsSystemTacacs, UcsSystemTimezoneMgmt,
+    UcsSystemFabricInterconnectAuditLogs
 )
 from config.ucs.ucsm.lan import (
     UcsSystemApplianceNetworkControlPolicy, UcsSystemApplianceVlan, UcsSystemLanPinGroup,
@@ -235,6 +236,9 @@ class UcsSystemConfigManager(GenericUcsConfigManager):
         if "faultPolicy" in config.sdk_objects:
             config.global_fault_policy.append(
                 UcsSystemFaultPolicy(parent=config, fault_policy=config.sdk_objects["faultPolicy"][0]))
+        if "commFabricInterconnectAuditLogs" in config.sdk_objects:
+            if config.sdk_objects["commFabricInterconnectAuditLogs"]:
+                config.fabric_interconnect_audit_logs.append(UcsSystemFabricInterconnectAuditLogs(parent=config))
         config.syslog.append(UcsSystemSyslog(parent=config))
         config.radius.append(UcsSystemRadius(parent=config))
         config.tacacs.append(UcsSystemTacacs(parent=config))
@@ -737,6 +741,9 @@ class UcsSystemConfigManager(GenericUcsConfigManager):
                 is_pushed = config.global_fault_policy[0].push_object() and is_pushed
             if config.syslog:
                 is_pushed = config.syslog[0].push_object() and is_pushed
+            if config.fabric_interconnect_audit_logs:
+                is_pushed = config.fabric_interconnect_audit_logs[0].push_object(
+                ) and is_pushed
             for locale in config.locales:
                 is_pushed = locale.push_object() and is_pushed
             for role in config.roles:
@@ -1219,6 +1226,8 @@ class UcsSystemConfigManager(GenericUcsConfigManager):
                 UcsSystemFaultPolicy(parent=config, json_content=config_json["global_fault_policy"][0]))
         if "syslog" in config_json:
             config.syslog.append(UcsSystemSyslog(parent=config, json_content=config_json["syslog"][0]))
+        if "fabric_interconnect_audit_logs" in config_json:
+            config.fabric_interconnect_audit_logs.append(UcsSystemFabricInterconnectAuditLogs(parent=config, json_content=config_json["fabric_interconnect_audit_logs"][0]))
         if "radius" in config_json:
             config.radius.append(UcsSystemRadius(parent=config, json_content=config_json["radius"][0]))
         if "tacacs" in config_json:

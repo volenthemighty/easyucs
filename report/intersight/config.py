@@ -5,6 +5,7 @@
 
 from report.intersight.server_policies import (
     IntersightOrganizationsReportSection,
+    IntersightResourceGroupsReportSection,
     IntersightBiosPoliciesReportSection,
     IntersightBootPoliciesReportSection,
     IntersightDriveSecurityPoliciesReportSection,
@@ -17,6 +18,7 @@ from report.intersight.server_policies import (
     IntersightFcQosPoliciesReportSection,
     IntersightFcZonePoliciesReportSection,
     IntersightFirmwarePoliciesReportSection,
+    IntersightIdMappingPoliciesReportSection,
     IntersightImcAccessPoliciesReportSection,
     IntersightIpmiOverLanPoliciesReportSection,
     IntersightIscsiAdapterPoliciesReportSection,
@@ -61,6 +63,8 @@ class IntersightConfigReportSection(UcsReportSection):
 
         self.content_list.append(
             IntersightOrganizationsReportSection(self.report.get_current_order_id(), parent=self))
+        self.content_list.append(
+            IntersightResourceGroupsReportSection(self.report.get_current_order_id(), parent=self))
         self.content_list.append(
             IntersightPoolsReportSection(self.report.get_current_order_id(), parent=self))
         self.content_list.append(
@@ -119,6 +123,8 @@ class IntersightPoliciesReportSection(UcsReportSection):
             IntersightFcZonePoliciesReportSection(order_id=self.report.get_current_order_id(), parent=self))
         self.content_list.append(
             IntersightFirmwarePoliciesReportSection(order_id=self.report.get_current_order_id(), parent=self))
+        self.content_list.append(
+            IntersightIdMappingPoliciesReportSection(order_id=self.report.get_current_order_id(), parent=self))
         self.content_list.append(
             IntersightImcAccessPoliciesReportSection(order_id=self.report.get_current_order_id(), parent=self))
         self.content_list.append(

@@ -549,7 +549,7 @@ def password_generator(
         return False
 
     # A string of allowed punctuations
-    allowed_punctuation = r"""!@#$%^&\*+-_="""
+    allowed_punctuation = r"""!@#$%^&*+-_="""
 
     random_source = string.ascii_letters + string.digits + allowed_punctuation
     password = ''.join((secrets.choice(string.ascii_lowercase)) for i in range(min_lowercase))

@@ -188,6 +188,7 @@ class IntersightFabricInterconnect(IntersightConfigObject):
         self.serial = self.get_attribute(attribute_name="serial")
         self.traffic_mirroring_sessions = None
         self.ports = None
+        self.user_label = self.get_attribute(attribute_name="user_label")
 
         if self._config.load_from == "live":
             self._get_device_host_name()
@@ -453,19 +454,26 @@ class IntersightFabricInterconnect(IntersightConfigObject):
             err_message = "Could not find Fabric Interconnect '" + self.name + '-' + self.switch_id + "'"
             self.logger(level="error", message=err_message)
             return False
-        elif len(network_element_list) == 1 and self.tags:
+        elif len(network_element_list) == 1 and (self.tags or self.user_label):
             from intersight.model.network_element import NetworkElement
             kwargs = {
                 "object_type": "network.Element",
                 "class_id": "network.Element"
             }
+            detail = ""
             if self.tags is not None:
                 kwargs["tags"] = self.create_tags()
+                detail += "Tags"
+            if self.user_label is not None:
+                kwargs["user_label"] = self.user_label
+                if detail:
+                    detail += " and "
+                detail += "User Label"
             kwargs["moid"] = network_element_list[0].moid
             fi = NetworkElement(**kwargs)
             self.commit(
                 object_type=self._INTERSIGHT_SDK_OBJECT_NAME,
-                key_attributes=["moid"], payload=fi, detail=self.name + ' - Tags',
+                key_attributes=["moid"], payload=fi, detail=self.name + " - " + detail,
                 modify_present=True)
 
         if self.serial and self.traffic_mirroring_sessions:
@@ -949,6 +957,9 @@ class IntersightChassis(IntersightConfigObject):
     _CONFIG_NAME = "Chassis"
     _CONFIG_SECTION_NAME = "chassis"
     _INTERSIGHT_SDK_OBJECT_NAME = "equipment.Chassis"
+    _CONFIG_SECTION_ATTRIBUTES_MAP = {
+        "blades": "Blades"
+    }
 
     def __init__(self, parent=None, equipment_chassis=None):
         IntersightConfigObject.__init__(self, parent=parent, sdk_object=equipment_chassis)
@@ -963,10 +974,10 @@ class IntersightChassis(IntersightConfigObject):
             self.blades = self._get_blades()
 
         elif self._config.load_from == "file":
-            for attribute in ["blades"]:
-                setattr(self, attribute, None)
-                if attribute in self._object:
-                    setattr(self, attribute, self.get_attribute(attribute_name=attribute))
+            if "blades" in self._object:
+                self.blades = []
+                for blade in self._object["blades"]:
+                    self.blades.append(IntersightComputeBlade(parent=self, compute_blade=blade))
         self.clean_object()
 
     def clean_object(self):
@@ -983,26 +994,8 @@ class IntersightChassis(IntersightConfigObject):
         if "compute_blade" in self._config.sdk_objects:
             for compute_blade in self._config.sdk_objects["compute_blade"]:
                 if compute_blade.equipment_chassis.moid == self._moid:
-                    blade = {}
-                    blade.update({
-                        "name": compute_blade.name,
-                        "serial": compute_blade.serial,
-                        "slot_id": compute_blade.slot_id
-                    })
-                    if getattr(compute_blade, "tags"):
-                        blade["tags"] = []
-                        for tag in compute_blade.tags:
-                            if not tag.get("key", "").endswith("LicenseTier"):  # Ignoring system defined tags
-                                blade["tags"].append({"key": tag.get("key"), "value": tag.get("value")})
-                    for compute_server_setting in self._config.sdk_objects["compute_server_setting"]:
-                        if compute_server_setting.server.moid == compute_blade.moid:
-                                blade.update({"asset_tag": compute_server_setting.server_config.asset_tag 
-                                              if compute_server_setting.server_config.asset_tag else None, 
-                                              "user_label": compute_server_setting.server_config.user_label
-                                              if compute_server_setting.server_config.user_label else None})
-                                break
-                    blades.append(blade)
-
+                    blades.append(IntersightComputeBlade(
+                        parent=self, compute_blade=compute_blade))
             return blades
         return None
 
@@ -1042,62 +1035,102 @@ class IntersightChassis(IntersightConfigObject):
         if self.blades:
             from intersight.model.compute_blade import ComputeBlade
             for blade in self.blades:
-                self.logger(message=f"Pushing Blade Configuration: " + blade["name"])
-                if blade.get("serial"):
-                    filter_key, filter_value = "Serial", blade.get("serial")
-                elif self.id and self._parent.name and blade.get('slot_id'):
-                    filter_key, filter_value = "Name", self._parent.name + "-" + str(self.id) + "-" + str(
-                        blade.get('slot_id'))
-                elif self.name:
-                    filter_key, filter_value = "Name", self.name
-                filter_str = f"{filter_key} eq '{filter_value}'"
-                compute_blade_list = self._device.query(object_type="compute.Blade", filter=filter_str)
-                if len(compute_blade_list) != 1:
-                    err_message = "Could not find Blade '" + blade["name"] + "'"
-                    self.logger(level="error", message=err_message)
-                    return False
-                elif len(compute_blade_list) == 1 and (blade.get("tags") or blade.get("user_label")):
-                    compute_blade_kwargs = {
-                        "object_type": "compute.Blade",
-                        "class_id": "compute.Blade"
+                blade.push_object()
+
+        return True
+
+
+class IntersightComputeBlade(IntersightConfigObject):
+    _CONFIG_NAME = "Blades"
+    _CONFIG_SECTION_NAME = "blades"
+    _INTERSIGHT_SDK_OBJECT_NAME = "compute.Blade"
+
+    def __init__(self, parent=None, compute_blade=None):
+        IntersightConfigObject.__init__(self, parent=parent, sdk_object=compute_blade)
+
+        self.slot_id = self.get_attribute(attribute_name="slot_id")
+        self.name = self.get_attribute(attribute_name="name")
+        self.serial = self.get_attribute(attribute_name="serial")
+        self.asset_tag = None
+        self.user_label = None
+
+        if self._config.load_from == "live":
+            for compute_server_setting in self._config.sdk_objects["compute_server_setting"]:
+                if compute_server_setting.server.moid == self._moid:
+                    self.asset_tag = compute_server_setting.server_config.asset_tag \
+                          if compute_server_setting.server_config.asset_tag else None 
+                    self.user_label = compute_server_setting.server_config.user_label \
+                          if compute_server_setting.server_config.user_label else None
+
+        elif self._config.load_from == "file":
+            for attribute in ["asset_tag", "user_label"]:
+                setattr(self, attribute, None)
+                if attribute in self._object:
+                    setattr(self, attribute, self.get_attribute(attribute_name=attribute))
+
+    @IntersightConfigObject.update_taskstep_description()
+    def push_object(self):
+        from intersight.model.compute_blade import ComputeBlade
+        self.logger(message=f"Pushing Blade Configuration: " + self.name)
+        chassis = self._parent
+        if self.serial:
+            filter_key, filter_value = "Serial", self.serial
+        elif chassis.id and chassis._parent.name and chassis.slot_id:
+            filter_key, filter_value = "Name", chassis._parent.name + "-" + str(chassis.id) + "-" + str(
+                self.slot_id)
+        elif chassis.name:
+            filter_key, filter_value = "Name", chassis.name
+        filter_str = f"{filter_key} eq '{filter_value}'"
+        compute_blade_list = self._device.query(
+            object_type="compute.Blade", filter=filter_str)
+        if len(compute_blade_list) != 1:
+            err_message = "Could not find Blade '" + \
+                self.name + "'"
+            self.logger(level="error", message=err_message)
+        elif len(compute_blade_list) == 1 and (self.tags or self.user_label):
+            compute_blade_kwargs = {
+                "object_type": "compute.Blade",
+                "class_id": "compute.Blade"
+            }
+            if self.tags is not None:
+                # Ensuring the blade server's LicenseTier tag is retained while adding other tags
+                with_license_tier_tag = [{"key": blade_tag.get("key"), "value": blade_tag.get("value")}
+                                            for blade_tag in compute_blade_list[0].tags if blade_tag.get("key", "") == "Intersight.LicenseTier"]
+                with_license_tier_tag.extend(self.create_tags())
+                compute_blade_kwargs["tags"] = with_license_tier_tag
+                compute_blade_kwargs["moid"] = compute_blade_list[0].moid
+
+                compute_blade = ComputeBlade(**compute_blade_kwargs)
+                self.commit(
+                    object_type="compute.Blade", key_attributes=["moid"], payload=compute_blade,
+                    detail="Blade - " + self.name + ' - Tags', modify_present=True
+                )
+            if self.user_label or self.asset_tag:
+                from intersight.model.compute_server_setting import ComputeServerSetting
+
+                compute_server_config_kwargs = {
+                    "object_type": "compute.ServerConfig",
+                    "class_id": "compute.ServerConfig"
+                }
+                if self.user_label is not None:
+                    compute_server_config_kwargs["user_label"] = self.user_label
+                if self.asset_tag is not None:
+                    compute_server_config_kwargs["asset_tag"] = self.asset_tag
+                compute_server_setting_list = self._device.query(
+                    object_type="compute.ServerSetting", filter=f"Server.Moid eq '{compute_blade_list[0].moid}'")
+                if len(compute_server_setting_list) == 1:
+                    compute_server_setting_kwargs = {
+                        "object_type": "compute.ServerSetting",
+                        "class_id": "compute.ServerSetting"
                     }
-                    if blade.get("tags") is not None:
-                        # Ensuring the blade server's LicenseTier tag is retained while adding other tags
-                        with_license_tier_tag = [{"key": blade_tag.get("key"), "value": blade_tag.get("value")} \
-                            for blade_tag in compute_blade_list[0].tags if blade_tag.get("key", "") == "Intersight.LicenseTier"]
-                        with_license_tier_tag.extend(blade.get("tags"))
-                        compute_blade_kwargs["tags"] = with_license_tier_tag
-                        compute_blade_kwargs["moid"] = compute_blade_list[0].moid
-
-                        compute_blade = ComputeBlade(**compute_blade_kwargs)
-                        self.commit(
-                            object_type="compute.Blade", key_attributes=["moid"], payload=compute_blade,
-                            detail="Blade - " + blade["name"] + ' - Tags', modify_present=True
-                        )
-                    if blade.get("user_label") or blade.get("asset_tag"):
-                        from intersight.model.compute_server_setting import ComputeServerSetting
-
-                        compute_server_config_kwargs = {
-                            "object_type": "compute.ServerConfig",
-                            "class_id": "compute.ServerConfig"
-                        }
-                        if blade.get("user_label") is not None:
-                            compute_server_config_kwargs["user_label"] = blade.get("user_label")
-                        if blade.get("asset_tag") is not None:
-                            compute_server_config_kwargs["asset_tag"] = blade.get("asset_tag")
-                        compute_server_setting_list = self._device.query(object_type="compute.ServerSetting", filter=f"Server.Moid eq '{compute_blade_list[0].moid}'")
-                        if len(compute_server_setting_list) == 1:
-                            compute_server_setting_kwargs = {
-                                "object_type": "compute.ServerSetting",
-                                "class_id": "compute.ServerSetting"
-                            }
-                            compute_server_setting_kwargs["server_config"] = compute_server_config_kwargs
-                            compute_server_setting_kwargs["moid"] = compute_server_setting_list[0].moid
-                            compute_server_setting = ComputeServerSetting(**compute_server_setting_kwargs)
-                            self.commit(
-                                object_type="compute.ServerSetting", key_attributes=["moid"], payload=compute_server_setting,
-                                detail="Blade - " + blade["name"] + ' - Asset Tag or User Label', modify_present=True
-                            )
+                    compute_server_setting_kwargs["server_config"] = compute_server_config_kwargs
+                    compute_server_setting_kwargs["moid"] = compute_server_setting_list[0].moid
+                    compute_server_setting = ComputeServerSetting(
+                        **compute_server_setting_kwargs)
+                    self.commit(
+                        object_type="compute.ServerSetting", key_attributes=["moid"], payload=compute_server_setting,
+                        detail="Blade - " + self.name + ' - Asset Tag or User Label', modify_present=True
+                    )
 
         return True
 
@@ -1159,7 +1192,7 @@ class IntersightComputeRackUnit(IntersightConfigObject):
                 # Ensuring the rack server's LicenseTier tag is retained while adding other tags
                 with_license_tier_tag = [{"key": rack_tag.get("key"), "value": rack_tag.get("value")} \
                     for rack_tag in compute_rack_unit_list[0].tags if rack_tag.get("key", "") == "Intersight.LicenseTier"]
-                with_license_tier_tag.extend(self.tags)
+                with_license_tier_tag.extend(self.create_tags())
                 compute_rack_unit_kwargs["tags"] = with_license_tier_tag
                 compute_rack_unit_kwargs["moid"] = compute_rack_unit_list[0].moid
 

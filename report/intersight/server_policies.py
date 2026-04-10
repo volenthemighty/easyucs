@@ -43,6 +43,114 @@ class IntersightOrganizationsReportTable(UcsReportTable):
             column_number=len(rows[0]),
             centered=centered,
             cells_list=rows,
+            clean_empty_rows=False  # Keep all orgs - first column (name) is valuable data
+        )
+
+
+class IntersightResourceGroupsReportSection(UcsReportSection):
+    def __init__(self, order_id, parent, title="Resource Groups"):
+        UcsReportSection.__init__(self, order_id=order_id, parent=parent, title=title)
+
+        config = self.report.config
+
+        resource_groups = config.resource_groups
+
+        if resource_groups:
+            for resource_group in resource_groups:
+                self.content_list.append(
+                    IntersightResourceGroupReportSection(
+                        order_id=self.report.get_current_order_id(),
+                        parent=self,
+                        resource_group=resource_group,
+                        title=f"Resource Group {resource_group.name}"
+                    )
+                )
+        else:
+            self.content_list.append(
+                GenericReportText(
+                    order_id=self.report.get_current_order_id(),
+                    parent=self,
+                    string="No Resource Groups found.",
+                    italicized=True,
+                )
+            )
+
+
+class IntersightResourceGroupReportSection(UcsReportSection):
+    def __init__(self, order_id, parent, resource_group, title):
+        UcsReportSection.__init__(self, order_id=order_id, parent=parent, title=title)
+
+        self.content_list.append(
+            IntersightResourceGroupReportTable(
+                order_id=self.report.get_current_order_id(),
+                parent=self,
+                centered=True,
+                resource_group=resource_group
+            )
+        )
+
+        if resource_group.memberships == "custom" and resource_group.devices:
+            self.content_list.append(
+                GenericReportText(
+                    order_id=self.report.get_current_order_id(),
+                    parent=self,
+                    string="\nMember Devices: ",
+                    bolded=True,
+                )
+            )
+
+            self.content_list.append(
+                IntersightResourceGroupDevicesReportTable(
+                    order_id=self.report.get_current_order_id(),
+                    parent=self,
+                    centered=True,
+                    devices=resource_group.devices
+                )
+            )
+
+
+class IntersightResourceGroupReportTable(UcsReportTable):
+    def __init__(self, order_id, parent, resource_group, centered=False):
+
+        rows = [
+            ["Description", "Value"],
+            ["Name", resource_group.name],
+            ["Description", resource_group.descr],
+            ["Memberships", resource_group.memberships]
+        ]
+
+        UcsReportTable.__init__(
+            self,
+            order_id=order_id,
+            parent=parent,
+            row_number=len(rows),
+            column_number=len(rows[1]),
+            centered=centered,
+            cells_list=rows,
+        )
+
+
+class IntersightResourceGroupDevicesReportTable(UcsReportTable):
+    def __init__(self, order_id, parent, devices, centered=False):
+
+        rows = [["ID", "Name", "Type", "Identifier"]]
+
+        for device_num, device in enumerate(devices, start=1):
+            rows.append([
+                device_num,
+                device.get("name"),
+                device.get("type"),
+                device.get("serial_number") or device.get("moid")
+            ])
+
+        UcsReportTable.__init__(
+            self,
+            order_id=order_id,
+            parent=parent,
+            row_number=len(rows),
+            column_number=len(rows[1]),
+            centered=centered,
+            cells_list=rows,
         )
 
 
@@ -1361,6 +1469,7 @@ class IntersightFirmwarePolicyReportTable(UcsReportTable):
             ["Description", "Value"],
             ["Name", firmware_policy.name],
             ["Description", firmware_policy.descr],
+            ["Target Platform", firmware_policy.target_platform],
             ["Organization", firmware_policy._parent.name]
         ]
 
@@ -1393,6 +1502,110 @@ class IntersightFirmwarePolicyServerFirmwareReportTable(UcsReportTable):
             parent=parent,
             row_number=len(rows),
             column_number=len(rows[1]),
+            centered=centered,
+            cells_list=rows,
+        )
+
+
+class IntersightIdMappingPoliciesReportSection(UcsReportSection):
+    def __init__(self, order_id, parent, title="ID Mapping Policies"):
+        UcsReportSection.__init__(self, order_id=order_id, parent=parent, title=title)
+        config = self.report.config
+
+        id_mapping_policies_list = []
+        for org in config.orgs:
+            self.parse_org(org, id_mapping_policies_list, element_to_parse="id_mapping_policies")
+
+        if id_mapping_policies_list:
+            for id_mapping_policy in id_mapping_policies_list:
+                self.content_list.append(
+                    IntersightIdMappingPolicyReportSection(
+                        order_id=self.report.get_current_order_id(),
+                        parent=self,
+                        id_mapping_policy=id_mapping_policy,
+                        title=f"ID Mapping Policy {id_mapping_policy.name}"
+                    )
+                )
+        else:
+            self.content_list.append(
+                GenericReportText(
+                    order_id=self.report.get_current_order_id(),
+                    parent=self,
+                    string="No ID Mapping Policies found.",
+                    italicized=True,
+                )
+            )
+
+
+class IntersightIdMappingPolicyReportSection(UcsReportSection):
+    def __init__(self, order_id, parent, id_mapping_policy, title):
+        UcsReportSection.__init__(self, order_id=order_id, parent=parent, title=title)
+
+        self.content_list.append(
+            IntersightIdMappingPolicyReportTable(
+                order_id=self.report.get_current_order_id(),
+                parent=self,
+                centered=True,
+                id_mapping_policy=id_mapping_policy
+            )
+        )
+
+        if id_mapping_policy.resource_groups or id_mapping_policy.organizations:
+            self.content_list.append(
+                GenericReportText(
+                    order_id=self.report.get_current_order_id(),
+                    parent=self,
+                    string="\nResource Groups & Organizations: ",
+                    bolded=True,
+                )
+            )
+            self.content_list.append(
+                IntersightIdMappingPolicyResourceGroupsOrgsReportTable(
+                    order_id=self.report.get_current_order_id(),
+                    parent=self,
+                    centered=True,
+                    id_mapping_policy=id_mapping_policy,
+                )
+            )
+
+
+class IntersightIdMappingPolicyReportTable(UcsReportTable):
+    def __init__(self, order_id, parent, id_mapping_policy, centered=False):
+
+        rows = [
+            ["Description", "Value"],
+            ["Name", id_mapping_policy.name],
+            ["Description", id_mapping_policy.descr],
+            ["Organization", id_mapping_policy._parent.name]
+        ]
+
+        UcsReportTable.__init__(
+            self,
+            order_id=order_id,
+            parent=parent,
+            row_number=len(rows),
+            column_number=len(rows[1]),
+            centered=centered,
+            cells_list=rows,
+        )
+
+
+class IntersightIdMappingPolicyResourceGroupsOrgsReportTable(UcsReportTable):
+    def __init__(self, order_id, parent, id_mapping_policy, centered=False):
+
+        rows = [["Type", "Name"]]
+
+        if id_mapping_policy.resource_groups:
+            rows.append(["Resource Groups", ", ".join(id_mapping_policy.resource_groups)])
+        if id_mapping_policy.organizations:
+            rows.append(["Organizations", ", ".join(id_mapping_policy.organizations)])
+
+        UcsReportTable.__init__(
+            self,
+            order_id=order_id,
+            parent=parent,
+            row_number=len(rows),
+            column_number=len(rows[0]),
             centered=centered,
             cells_list=rows,
         )
@@ -2287,7 +2500,11 @@ class IntersightLocalUserPolicyUserReportTable(UcsReportTable):
             ["Username", name],
             ["Enable", user["enable"]],
             ["Role", user["role"]],
+            ["Choose Custom Account Types", user["choose_custom_account_types"]],
+            ["Use Different IPMI Password", user["use_different_ipmi_password"]]
         ]
+        if user.get("account_types", None):
+            rows.append(["Account Types", ", ".join(user["account_types"])])
 
         UcsReportTable.__init__(
             self,

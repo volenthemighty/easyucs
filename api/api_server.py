@@ -1836,6 +1836,8 @@ def device_uuid_actions_clear_config(device_uuid):
 
                 action_kwargs = {
                     "orgs": payload.get("orgs"),
+                    "delete_equipment_tags_and_labels": payload.get("delete_equipment_tags_and_labels", False),
+                    "delete_path_tags": payload.get("delete_path_tags", False),
                     "delete_settings": payload.get("delete_settings", False),
                     "force": payload.get("force", False)
                 }
@@ -2872,8 +2874,8 @@ def device_uuid_cache_orgs(device_uuid):
                 if cached_orgs.get("orgs", None):
                     response = response_handle(response={"orgs": cached_orgs["orgs"]}, code=200)
                 else:
-                    easyucs.logger(level="info", message="No cached orgs were found. Showing the default org.")
-                    response = response_handle(response={"orgs": cached_orgs}, code=200)
+                    easyucs.logger(level="info", message="No cached orgs were found.")
+                    response = response_handle(response={"orgs": {}}, code=200)
 
             elif device.metadata.device_type in ["ucsm", "ucsc"]:
                 if not cached_orgs or not cached_orgs.get("orgs"):
@@ -3395,7 +3397,7 @@ def device_uuid_config_uuid_orgs(device_uuid, config_uuid):
                 # Check if the org is shared (i.e., has shared_with_orgs list)
                 is_shared = bool(getattr(org, "shared_with_orgs", None))
 
-                # Check if the org has any profiles (server/domain/chassis and their templates)
+                # Check if the org has any profiles (server/domain/chassis/unified_edge and their templates)
                 has_profiles = any([
                     getattr(org, "ucs_server_profiles", []),
                     getattr(org, "ucs_server_profile_templates", []),
@@ -3403,6 +3405,8 @@ def device_uuid_config_uuid_orgs(device_uuid, config_uuid):
                     getattr(org, "ucs_domain_profile_templates", []),
                     getattr(org, "ucs_chassis_profiles", []),
                     getattr(org, "ucs_chassis_profile_templates", []),
+                    getattr(org, "unified_edge_profiles", []),
+                    getattr(org, "unified_edge_profile_templates", []),
                 ])
 
                 # Populate the org data dictionary with relevant information

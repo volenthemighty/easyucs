@@ -9,6 +9,69 @@ from config.intersight.server_policies import IntersightNetworkConnectivityPolic
     IntersightSnmpPolicy, IntersightSyslogPolicy, IntersightEthernetNetworkGroupPolicy, \
     IntersightEthernetNetworkControlPolicy
 
+class IntersightAuditDPolicy(IntersightConfigObject):
+    _CONFIG_NAME = "AuditD Policy"
+    _CONFIG_SECTION_NAME = "auditd_policies"
+    _INTERSIGHT_SDK_OBJECT_NAME = "auditd.Policy"
+
+    def __init__(self, parent=None, auditd_policy=None):
+        IntersightConfigObject.__init__(self, parent=parent, sdk_object=auditd_policy)
+
+        self.descr = self.get_attribute(attribute_name="description", attribute_secondary_name="descr")
+        self.name = self.get_attribute(attribute_name="name")
+        self.admin_state = self.get_attribute(attribute_name="admin_state")
+        self.minimum_severity_to_report = self.get_attribute(
+                attribute_name="auditd_log_level", attribute_secondary_name="minimum_severity_to_report")
+
+        if self._config.load_from == "live":
+            self.minimum_severity_to_report = self._get_log_level(self.get_attribute(
+                attribute_name="auditd_log_level"), mode="file")
+        
+    def _get_log_level(self, level, mode="live"):
+        log_levels = {
+            "notifications": "Notification",
+            "emergencies": "Emergency",
+            "alerts": "Alert",
+            "critical": "Critical",
+            "errors": "Error",
+            "warnings": "Warning",
+            "information": "Information",
+            "debugging": "Debugging"
+        }
+        if mode == "live":
+            return next((live for live, file in log_levels.items() if file == level), "notifications")
+        elif mode == "file":
+            return log_levels.get(level)
+    
+    @IntersightConfigObject.update_taskstep_description()
+    def push_object(self):
+        from intersight.model.auditd_policy import AuditdPolicy
+
+        self.logger(message=f"Pushing {self._CONFIG_NAME} configuration: {self.name}")
+
+        kwargs = {
+            "object_type": self._INTERSIGHT_SDK_OBJECT_NAME,
+            "class_id": self._INTERSIGHT_SDK_OBJECT_NAME,
+            "organization": self.get_parent_org_relationship()
+        }
+        if self.name is not None:
+            kwargs["name"] = self.name
+        if self.descr is not None:
+            kwargs["description"] = self.descr
+        if self.tags is not None:
+            kwargs["tags"] = self.create_tags()
+        if self.admin_state is not None:
+            kwargs["admin_state"] = self.admin_state
+        if self.minimum_severity_to_report is not None:
+            kwargs["auditd_log_level"] = self._get_log_level(self.minimum_severity_to_report)
+
+        auditd_policy = AuditdPolicy(**kwargs)
+
+        if not self.commit(object_type=self._INTERSIGHT_SDK_OBJECT_NAME, payload=auditd_policy, detail=self.name):
+            return False
+
+        return True
+
 
 class IntersightFabricFlowControlPolicy(IntersightConfigObject):
     _CONFIG_NAME = "Flow Control Policy"
@@ -525,6 +588,10 @@ class IntersightFabricPortPolicy(IntersightConfigObject):
         self.server_ports = None
 
         if self._config.load_from == "live":
+            # Fix for invalid eCMC model for pre-released units
+            if self.device_model == "UCSXE-ECMC":
+                self.device_model = "UCSXE-ECMC-G1"
+
             self.appliance_port_channels = self._get_appliance_port_channels()
             self.appliance_ports = self._get_appliance_ports()
             self.breakout_ports = self._get_breakout_ports()
@@ -690,6 +757,20 @@ class IntersightFabricPortPolicy(IntersightConfigObject):
                                 breakout_ports.append({"slot_id": fabric_port_mode.slot_id,
                                                        "port_id": port_id,
                                                        "mode": "4x25g"})
+                    elif fabric_port_mode.port_policy.moid == self._moid and \
+                            getattr(fabric_port_mode, "custom_mode", None) == "BreakoutEthernet2x100G":
+                        if fabric_port_mode.port_id_start and fabric_port_mode.port_id_end:
+                            for port_id in range(fabric_port_mode.port_id_start, fabric_port_mode.port_id_end + 1):
+                                breakout_ports.append({"slot_id": fabric_port_mode.slot_id,
+                                                       "port_id": port_id,
+                                                       "mode": "2x100g"})
+                    elif fabric_port_mode.port_policy.moid == self._moid and \
+                            getattr(fabric_port_mode, "custom_mode", None) == "BreakoutEthernet4x100G":
+                        if fabric_port_mode.port_id_start and fabric_port_mode.port_id_end:
+                            for port_id in range(fabric_port_mode.port_id_start, fabric_port_mode.port_id_end + 1):
+                                breakout_ports.append({"slot_id": fabric_port_mode.slot_id,
+                                                       "port_id": port_id,
+                                                       "mode": "4x100g"})
                     elif fabric_port_mode.port_policy.moid == self._moid and \
                             getattr(fabric_port_mode, "custom_mode", None) == "BreakoutFibreChannel8G":
                         if fabric_port_mode.port_id_start and fabric_port_mode.port_id_end:
@@ -1409,6 +1490,10 @@ class IntersightFabricPortPolicy(IntersightConfigObject):
                     kwargs["custom_mode"] = "BreakoutEthernet10G"
                 elif breakout_port["mode"] in ["4x25g"]:
                     kwargs["custom_mode"] = "BreakoutEthernet25G"
+                elif breakout_port["mode"] in ["2x100g"]:
+                    kwargs["custom_mode"] = "BreakoutEthernet2x100G"
+                elif breakout_port["mode"] in ["4x100g"]:
+                    kwargs["custom_mode"] = "BreakoutEthernet4x100G"
                 elif breakout_port["mode"] in ["4x8g"]:
                     kwargs["custom_mode"] = "BreakoutFibreChannel8G"
                 elif breakout_port["mode"] in ["4x16g"]:
@@ -2494,6 +2579,8 @@ class IntersightFabricSwitchControlPolicy(IntersightConfigObject):
         self.name = self.get_attribute(attribute_name="name")
         self.reserved_vlan_start_id = self.get_attribute(attribute_name="reserved_vlan_start_id")
         self.switching_mode = None
+        self.target_platform = self.get_attribute(attribute_name="target_platform")
+        self.enable_jumbo_frames = None
         self.vlan_port_count_optimization = self.get_attribute(attribute_name="vlan_port_optimization_enabled",
                                                                attribute_secondary_name="vlan_port_count_optimization")
 
@@ -2528,11 +2615,13 @@ class IntersightFabricSwitchControlPolicy(IntersightConfigObject):
             if hasattr(self._object, "fc_switching_mode"):
                 if self._object.fc_switching_mode:
                     self.switching_mode["fc"] = self._object.fc_switching_mode
+            if self.target_platform == "Unified Edge" and hasattr(self._object, "enable_jumbo_frame"):
+                self.enable_jumbo_frames = self._object.enable_jumbo_frame
 
         elif self._config.load_from == "file":
-            for attribute in ["aes_encryption_key", "enable_aes_encryption_key", "fabric_port_channel_vhba_reset",
-                              "link_control_global_settings", "mac_address_table_aging", "mac_aging_time",
-                              "switching_mode"]:
+            for attribute in ["aes_encryption_key", "enable_aes_encryption_key", "enable_jumbo_frames",
+                              "fabric_port_channel_vhba_reset", "link_control_global_settings",
+                              "mac_address_table_aging", "mac_aging_time", "switching_mode"]:
                 setattr(self, attribute, None)
                 if attribute in self._object:
                     setattr(self, attribute, self.get_attribute(attribute_name=attribute))
@@ -2587,6 +2676,10 @@ class IntersightFabricSwitchControlPolicy(IntersightConfigObject):
             kwargs["description"] = self.descr
         if self.tags is not None:
             kwargs["tags"] = self.create_tags()
+        if self.target_platform is not None:
+            kwargs["target_platform"] = self.target_platform
+        if self.enable_jumbo_frames is not None:
+            kwargs["enable_jumbo_frame"] = self.enable_jumbo_frames
         if self.fabric_port_channel_vhba_reset is not None:
             if self.fabric_port_channel_vhba_reset is True:
                 kwargs["fabric_pc_vhba_reset"] = "Enabled"
@@ -2668,6 +2761,7 @@ class IntersightFabricSystemQosPolicy(IntersightConfigObject):
 
         self.descr = self.get_attribute(attribute_name="description", attribute_secondary_name="descr")
         self.name = self.get_attribute(attribute_name="name")
+        self.target_platform = self.get_attribute(attribute_name="target_platform")
         self.classes = None
 
         if self._config.load_from == "live":
@@ -2719,6 +2813,8 @@ class IntersightFabricSystemQosPolicy(IntersightConfigObject):
             kwargs["description"] = self.descr
         if self.tags is not None:
             kwargs["tags"] = self.create_tags()
+        if self.target_platform is not None:
+            kwargs["target_platform"] = self.target_platform
 
         fabric_system_qos_policy = FabricSystemQosPolicy(**kwargs)
 
@@ -2798,6 +2894,7 @@ class IntersightFabricVlanPolicy(IntersightConfigObject):
 
         self.descr = self.get_attribute(attribute_name="description", attribute_secondary_name="descr")
         self.name = self.get_attribute(attribute_name="name")
+        self.target_platform = self.get_attribute(attribute_name="target_platform")
         self.vlans = None
 
         if self._config.load_from == "live":
@@ -2910,6 +3007,8 @@ class IntersightFabricVlanPolicy(IntersightConfigObject):
             kwargs["description"] = self.descr
         if self.tags is not None:
             kwargs["tags"] = self.create_tags()
+        if self.target_platform is not None:
+            kwargs["target_platform"] = self.target_platform
 
         fabric_eth_network_policy = FabricEthNetworkPolicy(**kwargs)
 

@@ -1,0 +1,139 @@
+{
+   "id": "intersight_config_orgs_pcie_connectivity_policies#",
+   "$schema": "http://json-schema.org/draft-07/schema#",
+   "title": "EasyUCS intersight config orgs pcie_connectivity_policies section",
+   "description": "EasyUCS intersight config orgs pcie_connectivity_policies section JSON schema",
+   "type": "object",
+   "properties": {
+      "comment": {
+         "description": "PCIe Connectivity Policy Comments",
+         "type": "string",
+         "default": ""
+      },
+      "descr": {
+         "description": "PCIe Connectivity Policy Description",
+         "type": "string",
+         "default": "",
+         "pattern": "^$|^[a-zA-Z0-9]+[\\x00-\\xFF]*$",
+         "maxLength": 1024
+      },
+      "name": {
+         "description": "PCIe Connectivity Policy Name",
+         "type": "string",
+         "default": "",
+         "pattern": "^[a-zA-Z0-9_.:-]{1,64}$"
+      },
+      "tags": {
+         "description": "PCIe Connectivity Policy Tags",
+         "type": "array",
+         "items": {
+            "description": "PCIe Connectivity Policy Tag",
+            "type": "object",
+            "properties": {
+               "key": {
+                  "description": "PCIe Connectivity Policy Tag Key",
+                  "type": "string",
+                  "default": "",
+                  "minLength": 1,
+                  "maxLength": 128
+               },
+               "value": {
+                  "description": "PCIe Connectivity Policy Tag Value",
+                  "type": "string",
+                  "default": "",
+                  "minLength": 0,
+                  "maxLength": 256
+               }
+            },
+            "additionalProperties": false,
+            "required": [
+               "key"
+            ]
+         },
+         "minItems": 1
+      },
+      "endpoint_mappings": {
+         "description": "PCIe Connectivity Policy Endpoint Mappings",
+         "type":"array",
+         "items": {
+            "description": "PCIe Connectivity Policy Endpoint Mapping",
+            "type": "object",
+            "properties": {
+               "cpus": {
+                  "description": "PCIe Connectivity Policy - root PCIe endpoint device - CPU",
+                  "type":"object",
+                  "properties": {
+                     "id": {
+                        "description": "PCIe Connectivity Policy - root PCIe endpoint device - CPU ID",
+                        "type":"string",
+                        "default": "Any",
+                        "enum": [
+                           "Any",
+                           "1",
+                           "2"
+                        ]
+                     }
+                  }
+               },
+               "gpus": {
+                  "description": "PCIe Connectivity Policy - PCIe endpoint device - GPU",
+                  "type": "object",
+                  "properties": {
+                     "quantity": {
+                        "description": "PCIe Connectivity Policy - PCIe endpoint device - GPU Quantity",
+                        "type": "integer",
+                        "default": 1,
+                        "minimum": 1,
+                        "maximum": 2
+                     },
+                     "model": {
+                        "description": "PCIe Connectivity Policy - PCIe endpoint device - GPU Model",
+                        "type": "string",
+                        "default": "Any",
+                        "enum": [
+                           "Any",
+                           "UCSC-GPU-H100-NVL",
+                           "UCSC-GPU-H200-NVL",
+                           "UCSC-GPU-L40S",
+                           "UCSC-GPU-RTXP6000"
+                        ]
+                     }
+                  }
+               },
+               "smartnic": {
+                  "description": "PCIe Connectivity Policy - PCIe endpoint device - SmartNIC",
+                  "type": "object",
+                  "properties": {
+                     "quantity": {
+                        "description": "PCIe Connectivity Policy - PCIe endpoint device - SmartNIC Quantity",
+                        "type": "integer",
+                        "default": 1,
+                        "minimum": 1,
+                        "maximum": 1
+                     },
+                     "model": {
+                        "description": "PCIe Connectivity Policy - PCIe endpoint device - SmartNIC Model",
+                        "type": "string",
+                        "default": "Any",
+                        "enum": [
+                           "Any",
+                           "UCSC-P-N7S400GF",
+                           "UCSC-P-N7D200GF",
+                           "UCSC-P-N7S400GFO",
+                           "UCSC-P-N7D200GFO"
+                        ]
+                     }
+                  }
+               }
+            },
+            "additionalProperties": false
+         },
+         "minItems": 1,
+         "maxItems": 2
+      }
+   },
+   "additionalProperties": false,
+   "required": [
+      "name"
+   ]
+}

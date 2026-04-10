@@ -60,8 +60,11 @@
             "UCS-FI-6454",
             "UCS-FI-64108",
             "UCS-FI-6536",
+            "UCS-FI-6652",
             "UCS-FI-6664",
             "UCSX-S9108-100G",
+            "UCSXE-ECMC-10G",
+            "UCSXE-ECMC-G1",
             "unknown"
          ]
       },
@@ -82,7 +85,9 @@
                      "10Gbps",
                      "25Gbps",
                      "40Gbps",
-                     "100Gbps"
+                     "50Gbps",
+                     "100Gbps",
+                     "400Gbps"
                   ]
                },
                "fec": {
@@ -231,7 +236,9 @@
                      "10Gbps",
                      "25Gbps",
                      "40Gbps",
-                     "100Gbps"
+                     "50Gbps",
+                     "100Gbps",
+                     "400Gbps"
                   ]
                },
                 "enable_25gb_copper_cable_negotiation": {
@@ -324,11 +331,13 @@
                   "description": "Port Policy - Breakout Port - Mode",
                   "type": "string",
                   "enum": [
+                     "2x100g",
                      "4x8g",
                      "4x10g",
                      "4x16g",
                      "4x25g",
-                     "4x32g"
+                     "4x32g",
+                     "4x100g"
                   ]
                }
             },
@@ -357,7 +366,9 @@
                      "10Gbps",
                      "25Gbps",
                      "40Gbps",
-                     "100Gbps"
+                     "50Gbps",
+                     "100Gbps",
+                     "400Gbps"
                   ]
                },
                "fec": {
@@ -482,7 +493,9 @@
                      "10Gbps",
                      "25Gbps",
                      "40Gbps",
-                     "100Gbps"
+                     "50Gbps",
+                     "100Gbps",
+                     "400Gbps"
                   ]
                },
                "enable_25gb_copper_cable_negotiation": {
@@ -620,7 +633,9 @@
                      "10Gbps",
                      "25Gbps",
                      "40Gbps",
-                     "100Gbps"
+                     "50Gbps",
+                     "100Gbps",
+                     "400Gbps"
                   ]
                },
                "fec": {
@@ -770,7 +785,9 @@
                      "10Gbps",
                      "25Gbps",
                      "40Gbps",
-                     "100Gbps"
+                     "50Gbps",
+                     "100Gbps",
+                     "400Gbps"
                   ]
                },
                "enable_25gb_copper_cable_negotiation": {

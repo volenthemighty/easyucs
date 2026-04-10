@@ -26,7 +26,7 @@ class DeleteSummaryManager:
             "deleted_objects": {}
         }
 
-    def add_obj_status(self, obj, status="success", message=None):
+    def add_obj_status(self, obj, status="success", message=None, obj_name=None):
         """
         Adds a deletion record to the summary.
 
@@ -34,6 +34,8 @@ class DeleteSummaryManager:
             obj (object): The object being deleted.
             status (str, optional): The status of the deletion, either "success", "failed", or "skipped".
             message (str, optional): Message in case of skipped or failed push
+            obj_name (str, optional): Name of the object being deleted, if not directly available from the
+            object attributes.
         Returns:
             bool: returns True.
         """
@@ -47,6 +49,8 @@ class DeleteSummaryManager:
         # Extract details from the object
         object_type = getattr(obj, 'object_type', None)
         object_name = getattr(obj, 'name', None)
+        if object_name is None:
+            object_name = obj_name  # Use the provided obj_name if name attribute is not available
         organization_moid = getattr(obj.organization, 'moid', None) if hasattr(obj, 'organization') else None
 
         # Fetch organization name using moid from the mapping

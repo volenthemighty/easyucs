@@ -1,0 +1,76 @@
+{
+   "id": "intersight_config_orgs_id_mapping_policies#",
+   "$schema": "http://json-schema.org/draft-07/schema#",
+   "title": "EasyUCS intersight config orgs id_mapping_policies section",
+   "description": "EasyUCS intersight config orgs id_mapping_policies section JSON schema",
+   "type": "object",
+   "properties": {
+      "comment": {
+         "description": "ID Mapping Policy Comments",
+         "type": "string",
+         "default": ""
+      },
+      "descr": {
+         "description": "ID Mapping Policy Description",
+         "type": "string",
+         "default": "",
+         "pattern": "^$|^[a-zA-Z0-9]+[\\x00-\\xFF]*$",
+         "maxLength": 1024
+      },
+      "name": {
+         "description": "ID Mapping Policy Name",
+         "type": "string",
+         "default": "",
+         "pattern": "^[a-zA-Z0-9_.:-]{1,64}$"
+      },
+      "tags": {
+         "description": "ID Mapping Policy Tags",
+         "type": "array",
+         "items": {
+            "description": "ID Mapping Policy Tag",
+            "type": "object",
+            "properties": {
+               "key": {
+                  "description": "ID Mapping Policy Tag Key",
+                  "type": "string",
+                  "default": "",
+                  "minLength": 1,
+                  "maxLength": 128
+               },
+               "value": {
+                  "description": "ID Mapping Policy Tag Value",
+                  "type": "string",
+                  "default": "",
+                  "minLength": 0,
+                  "maxLength": 256
+               }
+            },
+            "additionalProperties": false,
+            "required": [
+               "key"
+            ]
+         },
+         "minItems": 1
+      },
+      "resource_groups": {
+         "description": "ID Mapping Policy - Resource Groups",
+         "type": "array",
+         "items": {
+            "description": "ID Mapping Policy - Resource Group",
+            "type": "string"
+         }
+      },
+      "organizations": {
+         "description": "ID Mapping Policy - Organizations",
+         "type": "array",
+         "items": {
+            "description": "ID Mapping Policy - Organization",
+            "type": "string"
+         }
+      }
+   },
+   "additionalProperties": false,
+   "required": [
+      "name"
+   ]
+}

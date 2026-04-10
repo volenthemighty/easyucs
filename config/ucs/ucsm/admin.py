@@ -70,6 +70,7 @@ from ucsmsdk.mometa.comm.CommCimxml import CommCimxml
 from ucsmsdk.mometa.comm.CommDateTime import CommDateTime
 from ucsmsdk.mometa.comm.CommDns import CommDns
 from ucsmsdk.mometa.comm.CommDnsProvider import CommDnsProvider
+from ucsmsdk.mometa.comm.CommFabricInterconnectAuditLogs import CommFabricInterconnectAuditLogs
 from ucsmsdk.mometa.comm.CommHttp import CommHttp
 from ucsmsdk.mometa.comm.CommHttps import CommHttps
 from ucsmsdk.mometa.comm.CommNtpProvider import CommNtpProvider
@@ -1792,6 +1793,53 @@ class UcsSystemSyslog(UcsSystemConfigObject):
         if commit:
             if self.commit(detail="Settings & Destinations") != True:
                 return False
+        return True
+
+
+class UcsSystemFabricInterconnectAuditLogs(UcsSystemConfigObject):
+    _CONFIG_NAME = "Fabric Interconnect Audit Logs"
+    _CONFIG_SECTION_NAME = "fabric_interconnect_audit_logs"
+
+    def __init__(self, parent=None, json_content=None):
+        UcsSystemConfigObject.__init__(self, parent=parent)
+
+        self.admin_state = None
+        self.severity = None
+        self.policy_owner = None
+
+        if self._config.load_from == "live":
+            if "commFabricInterconnectAuditLogs" in self._config.sdk_objects:
+                audit_log = self._config.sdk_objects["commFabricInterconnectAuditLogs"][0]
+                self.admin_state = audit_log.admin_state
+                self.severity = audit_log.severity
+                if audit_log.policy_owner in ["policy"]:
+                    self.policy_owner =  "ucs-central"
+
+        elif self._config.load_from == "file":
+            if json_content is not None:
+                if not self.get_attributes_from_json(json_content=json_content):
+                    self.logger(level="error",
+                                message="Unable to get attributes from JSON content for " + self._CONFIG_NAME)
+
+    def push_object(self, commit=True):
+        if commit:
+            self.logger(message="Pushing " + self._CONFIG_NAME)
+        else:
+            self.logger(message="Adding to the handle " + self._CONFIG_NAME + " configuration" +
+                                ", waiting for a commit")
+
+        parent_mo_svc_ext = "sys/svc-ext"
+   
+        mo_comm_fi_audit_logs = \
+            CommFabricInterconnectAuditLogs(parent_mo_or_dn=parent_mo_svc_ext,
+                                admin_state=self.admin_state,
+                                severity=self.severity,
+                                policy_owner=self.policy_owner)
+        self._handle.add_mo(mo_comm_fi_audit_logs, modify_present=True)
+        if commit:
+            if self.commit("Fabric Interconnect Audit Logs") != True:
+                return False
+
         return True
 
 

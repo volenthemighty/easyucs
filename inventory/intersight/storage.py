@@ -119,6 +119,8 @@ class IntersightStorageControllerNvmeDrive(GenericStorageLocalDisk, IntersightIn
             storage_controller = self.get_inventory_objects_from_ref(ref=self._object.storage_controller)
             if len(storage_controller) == 1:
                 self.pci_slot = storage_controller[0].pci_slot
+                if self.id == "NVMe_Device" and storage_controller[0].controller_id:
+                    self.id = storage_controller[0].controller_id
 
             self._determine_nvme_slot_type()
             self._determine_size_and_rpm(self.name)

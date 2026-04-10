@@ -9,10 +9,11 @@ import json
 import re
 import uuid
 
+from intersight.api.bulk_api import BulkApi
+
 from intersight.exceptions import ApiAttributeError, ApiValueError, ApiTypeError, ApiException, ApiKeyError
 
 from config.object import GenericConfigObject
-from config.ucs.object import GenericUcsConfigObject
 
 
 class IntersightConfigObject(GenericConfigObject):
@@ -346,6 +347,49 @@ class IntersightConfigObject(GenericConfigObject):
         mo_mo_ref = MoMoRef(moid=sdk_object.moid, class_id='mo.MoRef', object_type=object_type)
         return mo_mo_ref
 
+    def create_path_tag(self, key=None):
+        """
+        Create a PathTag using Bulk API.
+
+        :param key: Tag key (path-style)
+        :return: API response if successful, otherwise None
+        """
+        if key is None:
+            return None
+
+        try:
+            # PathTag must be created via Bulk API (MoTag does not support PathTags directly)
+            bulk_api = BulkApi(self._device.handle)
+
+            response = bulk_api.create_bulk_request(
+                bulk_request = {
+                    "Verb": "POST",
+                    "Uri": "/v1/comm/TagDefinitions",
+                    "Requests": [
+                        {
+                            "ObjectType": "bulk.RestSubRequest",
+                            "Body": {
+                                "Key": key,
+                                "Type": "PathTag",
+                                "EnablePropagation": True,
+                            },
+                        }
+                    ],
+                }
+            )
+
+            # Return response only if creation succeeds
+            if response:
+                return response
+
+        except Exception as err:
+            self.logger(
+                level="error",
+                message=f"Failed to create PathTag '{key}' for {self._CONFIG_NAME} - {self.name}: {err}",
+            )
+
+        return None
+
     def create_tags(self):
         """
         Creates MoTags based on tags attributes of the current object
@@ -370,7 +414,13 @@ class IntersightConfigObject(GenericConfigObject):
                         continue
                 if tag["value"] is not None:
                     kwargs["value"] = tag["value"]
+                # If value is missing, treat as PathTag and create via Bulk API
+                else:
+                    # Skip this tag if PathTag creation fails
+                    if not self.create_path_tag(key=tag["key"]):
+                        continue
 
+                # Create MoTag object (applies to both KeyValue and PathTag)
                 tag_list.append(MoTag(**kwargs))
             del dup_check
             return tag_list
@@ -740,6 +790,17 @@ class IntersightConfigObject(GenericConfigObject):
                                 if object_class.__name__ in ["IntersightWwpnPool"]:
                                     if sdk_object.pool_purpose != "WWPN":
                                         continue
+                                # UCS Domain and Unified Edge Profile use the same object class
+                                # (fabric.SwitchClusterProfile). We use the "target_platform" parameter to
+                                # differentiate them.
+                                if object_class.__name__ in ["IntersightUcsDomainProfile",
+                                                             "IntersightUcsDomainProfileTemplate"]:
+                                    if sdk_object.target_platform != "UCS Domain":
+                                        continue
+                                if object_class.__name__ in ["IntersightUnifiedEdgeProfile",
+                                                             "IntersightUnifiedEdgeProfileTemplate"]:
+                                    if sdk_object.target_platform != "Unified Edge":
+                                        continue
                                 # Skipping objects imported using "Import Server Profile" feature & tagged as incomplete
                                 # as they can contain SDK-unsupported attribute values
                                 if any(tag.get("key", None) == "cisco.meta.configimport.Incomplete" and
@@ -748,6 +809,15 @@ class IntersightConfigObject(GenericConfigObject):
                                                 message="Skipping " + getattr(object_class, "_CONFIG_NAME", "None") +
                                                         " object with name '" + getattr(sdk_object, "name", "None") +
                                                         "' as it is tagged with incomplete Server Profile import")
+                                    continue
+                                # Skipping objects which have the "cisco.meta.systemdefined.*" tag as they are created
+                                # internally by the system for other usage (like Workload Deployments)
+                                if any(tag.get("key", "").startswith("cisco.meta.systemdefined.")
+                                       for tag in getattr(sdk_object, "tags", [])):
+                                    self.logger(level="debug",
+                                                message="Skipping " + getattr(object_class, "_CONFIG_NAME", "None") +
+                                                        " object with name '" + getattr(sdk_object, "name", "None") +
+                                                        "' as it is tagged as System Defined")
                                     continue
                                 filtered_sdk_objects_list.append(sdk_object)
 

@@ -524,6 +524,7 @@ class UcsSystemConfig(GenericUcsConfig):
         "communication_services": "Communication Services",
         "device_connector": "Device Connector",
         "dns": "DNS",
+        "fabric_interconnect_audit_logs": "Fabric Interconnect Audit Logs",
         "fc_zone_profiles": "FC Zone Profiles",
         "fcoe_port_channels": "FCoE Port Channels",
         "fcoe_storage_ports": "FCoE Storage Ports",
@@ -593,6 +594,7 @@ class UcsSystemConfig(GenericUcsConfig):
         self.device_connector = []
         self.dns = []
         self.global_fault_policy = []
+        self.fabric_interconnect_audit_logs = []
         self.fc_zone_profiles = []
         self.fcoe_port_channels = []
         self.fcoe_storage_ports = []
@@ -854,9 +856,9 @@ class UcsSystemConfig(GenericUcsConfig):
             'callhomeDest', 'callhomeEp', 'callhomePeriodicSystemInventory', 'callhomePolicy', 'callhomeProfile',
             'callhomeSmtp', 'callhomeSource', 'cimcvmediaConfigMountEntry', 'cimcvmediaMountConfigDef',
             'cimcvmediaMountConfigPolicy', 'commCimcWebService', 'commCimxml', 'commDateTime', 'commDns',
-            'commDnsProvider', 'commHttp', 'commHttps', 'commShellSvcLimits', 'commSnmp', 'commSnmpTrap',
-            'commSnmpUser', 'commSsh', 'commSyslog', 'commSyslogClient', 'commSyslogConsole', 'commSyslogFile',
-            'commSyslogMonitor', 'commSyslogSource', 'commTelnet', 'commWebSvcLimits', 'computeBoard',
+            'commDnsProvider', 'commFabricInterconnectAuditLogs', 'commHttp', 'commHttps', 'commShellSvcLimits',
+            'commSnmp', 'commSnmpTrap', 'commSnmpUser', 'commSsh', 'commSyslog', 'commSyslogClient', 'commSyslogConsole',
+            'commSyslogFile', 'commSyslogMonitor', 'commSyslogSource', 'commTelnet', 'commWebSvcLimits', 'computeBoard',
             'computeChassisDiscPolicy', 'computeChassisQual', 'computeFanPolicy', 'computeGraphicsCardPolicy',
             'computeHwChangeDiscPolicy', 'computeKvmMgmtPolicy', 'computeMemoryConfigPolicy',
             'computeModularChassisFanPolicy', 'computePhysicalQual', 'computePool', 'computePooledRackUnit',
@@ -1310,6 +1312,38 @@ class UcsCentralConfig(GenericUcsConfig):
                               "vlan_groups": {}}
         self.vxan_aliasing_in_use = False
 
+    def get_domain_group_from_path(self, domain_group_path=""):
+        """
+        Find a domain group by path and support hierarchy traversal.
+        Handles paths like "root/DG_GV/DG_GV-ALPHA".
+        :param domain_group_path: Full path like "root/DG_GV/DG_GV-ALPHA"
+        :return: UcsCentralDomainGroup object if found, None otherwise
+        """
+
+        if not domain_group_path:
+            self.logger(level="error", message="Domain Group path is empty.")
+            return None
+
+        path_parts = [part for part in domain_group_path.split("/") if part]
+
+        if not path_parts:
+            return None
+
+        current_pointer = getattr(self, "domain_groups", []) or []
+
+        current_match = None
+        for domain_group_name in path_parts:
+            current_match = next((dg for dg in current_pointer
+                                    if getattr(dg, "name", None) == domain_group_name), None)
+
+            if not current_match:
+                return None
+
+            current_pointer = getattr(
+                current_match, "domain_groups", []) or []
+
+        return current_match
+    
     def _determine_vxan_aliasing(self, domain_group_list=None, vxans_list=None):
         """
         Recursive function to check if the config is using aliasing for VLANs, Appliance VLANs, VSANs, Storage VSANs

@@ -58,6 +58,11 @@
          },
          "minItems": 1
       },
+      "auditd_policy": {
+         "description": "UCS Domain Profile Template AuditD Policy",
+         "type": "string",
+         "default": ""
+      },
       "ldap_policy": {
          "description": "UCS Domain Profile Template LDAP Policy",
          "type": "string",

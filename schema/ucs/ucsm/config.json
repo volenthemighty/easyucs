@@ -119,6 +119,16 @@
          },
          "minItems": 1
       },
+      "fabric_interconnect_audit_logs": {
+         "description": "EasyUCS config/fabric_interconnect_audit_logs section",
+         "type": "array",
+         "items": {
+            "description": "EasyUCS config/fabric_interconnect_audit_logs element",
+            "type": "object",
+            "$ref": "config/fabric_interconnect_audit_logs.json"
+         },
+         "minItems": 1
+      },
       "fc_zone_profiles": {
          "description": "EasyUCS config/fc_zone_profiles section",
          "type": "array",

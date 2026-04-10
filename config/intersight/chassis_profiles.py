@@ -117,7 +117,7 @@ class IntersightUcsChassisProfile(IntersightGenericUcsChassisProfile):
 
             # If Template is already copied then return
             target_template = new_parent._config.get_object(name=self.ucs_chassis_profile_template,
-                                                            org_name=self._parent.name,
+                                                            org_name=new_parent.name,
                                                             object_type=IntersightUcsChassisProfileTemplate,
                                                             debug=False)
             if target_template:

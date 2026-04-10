@@ -261,6 +261,13 @@
          ],
          "minItems": 1,
          "maxItems": 5
+      },
+      "user_label": {
+         "description": "Fabric Interconnect User Label",
+         "type": "string",
+         "minLength": 0,
+         "maxLength": 64,
+         "pattern": "^[ !#$%&\\(\\)\\*\\+,\\-\\.\\/:;\\?@\\[\\]_\\{\\|\\}~a-zA-Z0-9]*$"
       }
    },
    "additionalProperties": false,

@@ -97,6 +97,14 @@ components:
       type: boolean
       description: Whether to delete resource membership with organization
       example: false
+    delete_equipment_tags_and_labels:
+      type: boolean
+      description: True if user wants remove all asset tags, user labels, and tags (including path tags) from servers, fabric interconnects, and chassis, False otherwise
+      example: false
+    delete_path_tags:
+      type: boolean
+      description: True if user wants to delete path tags under tags section of system in Intersight, False otherwise
+      example: false
     delete_settings:
       type: boolean
       description: True if user wants to delete settings objects in Intersight, False otherwise
@@ -825,6 +833,10 @@ components:
       properties:
         orgs:
           $ref: '#/components/schemas/org_list'
+        delete_equipment_tags_and_labels:
+          $ref: '#/components/schemas/delete_equipment_tags_and_labels'
+        delete_path_tags:
+          $ref: '#/components/schemas/delete_path_tags'
         delete_settings:
           $ref: '#/components/schemas/delete_settings'
         force:

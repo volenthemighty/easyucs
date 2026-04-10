@@ -877,15 +877,6 @@
                      ]
                   }
                ]
-            },
-            "properties": {
-               "vhba_placement_mode": {
-                  "not": {
-                     "enum": [
-                        "auto"
-                     ]
-                  }
-               }
             }
          }
       },

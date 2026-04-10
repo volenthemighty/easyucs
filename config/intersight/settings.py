@@ -5,6 +5,7 @@
 
 import re
 
+from common import format_descr
 from config.intersight.object import IntersightConfigObject
 
 from config.intersight.chassis_profiles import (
@@ -13,6 +14,7 @@ from config.intersight.chassis_profiles import (
 )
 from config.intersight.network_policies import IntersightVhbaTemplate, IntersightVnicTemplate
 from config.intersight.pools import (
+    IntersightIdMappingPolicy,
     IntersightIpPool,
     IntersightIqnPool,
     IntersightMacPool,
@@ -23,6 +25,7 @@ from config.intersight.pools import (
     IntersightWwpnPool,
 )
 from config.intersight.fabric_policies import (
+    IntersightAuditDPolicy,
     IntersightFabricFlowControlPolicy,
     IntersightFabricLinkAggregationPolicy,
     IntersightFabricLinkControlPolicy,
@@ -62,6 +65,7 @@ from config.intersight.server_policies import (
     IntersightMemoryPolicy,
     IntersightNetworkConnectivityPolicy,
     IntersightNtpPolicy,
+    IntersightPcieConnectivityPolicy,
     IntersightPersistentMemoryPolicy,
     IntersightPowerPolicy,
     IntersightSanConnectivityPolicy,
@@ -84,6 +88,10 @@ from config.intersight.server_profiles import (
 from config.intersight.domain_profiles import (
     IntersightUcsDomainProfile,
     IntersightUcsDomainProfileTemplate,
+)
+from config.intersight.unified_edge_profiles import (
+    IntersightUnifiedEdgeProfile,
+    IntersightUnifiedEdgeProfileTemplate,
 )
 
 
@@ -309,6 +317,7 @@ class IntersightOrganization(IntersightConfigObject):
     _CONFIG_SECTION_NAME = "orgs"
     _CONFIG_SECTION_ATTRIBUTES_MAP = {
         "adapter_configuration_policies": "Adapter Configuration Policies",
+        "auditd_policies": "AuditD Policies",
         "bios_policies": "BIOS Policies",
         "boot_policies": "Boot Policies",
         "certificate_management_policies": "Certificate Management Policies",
@@ -325,6 +334,7 @@ class IntersightOrganization(IntersightConfigObject):
         "fibre_channel_qos_policies": "Fibre Channel QOS Policies",
         "firmware_policies": "Firmware Policies",
         "flow_control_policies": "Flow Control Policies",
+        "id_mapping_policies": "ID Mapping Policies",
         "imc_access_policies": "IMC Access Policies",
         "ip_pools": "IP Pools",
         "ipmi_over_lan_policies": "IPMI Over LAN Policies",
@@ -343,6 +353,7 @@ class IntersightOrganization(IntersightConfigObject):
         "multicast_policies": "Multicast Policies",
         "network_connectivity_policies": "Network Connectivity Policies",
         "ntp_policies": "NTP Policies",
+        "pcie_connectivity_policies": "PCIe Connectivity Policies",
         "persistent_memory_policies": "Persistent Memory Policies",
         "port_policies": "Port Policies",
         "power_policies": "Power Policies",
@@ -364,6 +375,8 @@ class IntersightOrganization(IntersightConfigObject):
         "ucs_chassis_profiles": "UCS Chassis Profiles",
         "ucs_domain_profile_templates": "UCS Domain Profile Templates",
         "ucs_domain_profiles": "UCS Domain Profiles",
+        "unified_edge_profile_templates": "Unified Edge Profile Templates",
+        "unified_edge_profiles": "Unified Edge Profiles",
         "ucs_server_profile_templates": "UCS Server Profile Templates",
         "ucs_server_profiles": "UCS Server Profiles",
         "uuid_pools": "UUID Pools",
@@ -435,6 +448,11 @@ class IntersightOrganization(IntersightConfigObject):
         )
 
         # Fabric Policies
+        self.auditd_policies = self._get_generic_element(
+            json_content=organization_organization,
+            object_class=IntersightAuditDPolicy,
+            name_to_fetch="auditd_policies",
+        )
         self.flow_control_policies = self._get_generic_element(
             json_content=organization_organization,
             object_class=IntersightFabricFlowControlPolicy,
@@ -499,6 +517,18 @@ class IntersightOrganization(IntersightConfigObject):
             json_content=organization_organization,
             object_class=IntersightUcsDomainProfile,
             name_to_fetch="ucs_domain_profiles",
+        )
+
+        # Unified Edge Profiles and Templates
+        self.unified_edge_profile_templates = self._get_generic_element(
+            json_content=organization_organization,
+            object_class=IntersightUnifiedEdgeProfileTemplate,
+            name_to_fetch="unified_edge_profile_templates",
+        )
+        self.unified_edge_profiles = self._get_generic_element(
+            json_content=organization_organization,
+            object_class=IntersightUnifiedEdgeProfile,
+            name_to_fetch="unified_edge_profiles",
         )
 
         # Server Policies
@@ -582,6 +612,11 @@ class IntersightOrganization(IntersightConfigObject):
             object_class=IntersightFirmwarePolicy,
             name_to_fetch="firmware_policies",
         )
+        self.id_mapping_policies = self._get_generic_element(
+            json_content=organization_organization,
+            object_class=IntersightIdMappingPolicy,
+            name_to_fetch="id_mapping_policies",
+        )
         self.imc_access_policies = self._get_generic_element(
             json_content=organization_organization,
             object_class=IntersightImcAccessPolicy,
@@ -636,6 +671,11 @@ class IntersightOrganization(IntersightConfigObject):
             json_content=organization_organization,
             object_class=IntersightNtpPolicy,
             name_to_fetch="ntp_policies",
+        )
+        self.pcie_connectivity_policies = self._get_generic_element(
+            json_content=organization_organization,
+            object_class=IntersightPcieConnectivityPolicy,
+            name_to_fetch="pcie_connectivity_policies",
         )
         self.persistent_memory_policies = self._get_generic_element(
             json_content=organization_organization,
@@ -993,8 +1033,8 @@ class IntersightOrganization(IntersightConfigObject):
         # We push all subconfig elements, in a specific optimized order
         # TODO: Verify order
         objects_to_push_in_order = [
-            'ip_pools', 'iqn_pools', 'mac_pools', 'server_pool_qualification_policies', 'resource_pools', 'uuid_pools',
-            'wwnn_pools', 'wwpn_pools', 'flow_control_policies', 'link_aggregation_policies', 'link_control_policies',
+            'id_mapping_policies', 'ip_pools', 'iqn_pools', 'mac_pools', 'server_pool_qualification_policies', 'resource_pools', 'uuid_pools',
+            'wwnn_pools', 'wwpn_pools', "auditd_policies", 'flow_control_policies', 'link_aggregation_policies', 'link_control_policies',
             'switch_control_policies', 'system_qos_policies', 'multicast_policies', 'vlan_policies', 'vsan_policies',
             'local_user_policies', 'adapter_configuration_policies', 'bios_policies', 'boot_policies',
             'certificate_management_policies', 'device_connector_policies', 'drive_security_policies',
@@ -1003,12 +1043,13 @@ class IntersightOrganization(IntersightConfigObject):
             'fibre_channel_network_policies', 'fibre_channel_qos_policies', 'firmware_policies', 'imc_access_policies',
             'ipmi_over_lan_policies', 'iscsi_adapter_policies', 'iscsi_static_target_policies', 'iscsi_boot_policies',
             'ldap_policies', 'macsec_policies', 'memory_policies', 'network_connectivity_policies', 'ntp_policies',
-            'persistent_memory_policies', 'power_policies', 'scrub_policies', 'sd_card_policies',
+            "pcie_connectivity_policies", 'persistent_memory_policies', 'power_policies', 'scrub_policies', 'sd_card_policies',
             'serial_over_lan_policies', 'smtp_policies', 'snmp_policies', 'ssh_policies', 'storage_policies',
             'syslog_policies', 'thermal_policies', 'virtual_kvm_policies', 'virtual_media_policies', 'vnic_templates',
             'lan_connectivity_policies', 'vhba_templates', 'san_connectivity_policies', 'port_policies',
             'ucs_domain_profile_templates', 'ucs_domain_profiles', 'ucs_chassis_profile_templates',
-            'ucs_chassis_profiles', 'ucs_server_profile_templates', 'ucs_server_profiles']
+            'ucs_chassis_profiles', 'ucs_server_profile_templates', 'ucs_server_profiles',
+            'unified_edge_profile_templates', 'unified_edge_profiles']
 
         is_pushed = True
         for config_object_type in objects_to_push_in_order:
@@ -1112,6 +1153,52 @@ class IntersightResourceGroup(IntersightConfigObject):
                 return device_list
 
         return None
+
+    def convert_from_ucs(self, source_objects=None):
+        """
+        Fills content of current object by converting attributes from provided UCS source_object(s)
+        :param source_objects: list of source UCS object(s) to convert
+        :return: True if successful, False otherwise
+        """
+        if not isinstance(source_objects, list):
+            self.logger(level="error", message=f"No {self._CONFIG_NAME} object provided for conversion.")
+            return False
+        if len(source_objects) != 1:
+            self.logger(level="error", message=f"{self._CONFIG_NAME} object not found for conversion.")
+            return False
+        if source_objects[0].__class__.__name__ not in ["UcsCentralDomainGroup"]:
+            self.logger(level="error", message=f"Invalid object type for conversion to {self._CONFIG_NAME}")
+            return False
+
+        target_config = self._parent
+        source_domain_group = source_objects[0]
+        source_device = source_domain_group._device
+
+        source_device.logger(
+            level="debug",
+            message="Converting {0} {1} '{2}' to Intersight {3}".format(
+                source_device.metadata.device_type_long, source_objects[0]._CONFIG_NAME, self.name, self._CONFIG_NAME)
+        )
+
+        if getattr(source_domain_group, "descr", None) is not None:
+            self.descr = format_descr(source_domain_group.descr)
+
+        # Resource groups created from UCS Central domain groups of ID Range Access Control Policy always have "all" membership
+        self.memberships = "all"
+        self.logger(
+            level="info",
+            message=f"Setting membership to 'all' for converted Resource Group '{self.name}' because all UCS "
+                    f"domains might not be available in Intersight to assign explicitly."
+        )
+
+        # Set the conversion score
+        score = float(10)
+        target_config.convert_details_manager.add_score(value=score)
+        
+        if not target_config.resource_groups:
+            target_config.resource_groups = []    
+        target_config.resource_groups.append(self)
+        return True
 
     @IntersightConfigObject.update_taskstep_description()
     def push_object(self):

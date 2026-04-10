@@ -10,6 +10,7 @@ from intersight.api.aaa_api import AaaApi
 from intersight.api.access_api import AccessApi
 from intersight.api.adapter_api import AdapterApi
 from intersight.api.asset_api import AssetApi
+from intersight.api.auditd_api import AuditdApi
 from intersight.api.bios_api import BiosApi
 from intersight.api.boot_api import BootApi
 from intersight.api.certificatemanagement_api import CertificatemanagementApi
@@ -33,6 +34,7 @@ from intersight.api.networkconfig_api import NetworkconfigApi
 from intersight.api.network_api import NetworkApi
 from intersight.api.ntp_api import NtpApi
 from intersight.api.organization_api import OrganizationApi
+from intersight.api.pool_api import PoolApi
 from intersight.api.power_api import PowerApi
 from intersight.api.resource_api import ResourceApi
 from intersight.api.resourcepool_api import ResourcepoolApi
@@ -100,12 +102,13 @@ class IntersightConfig(GenericConfig):
                                 {AccessApi: ["access_policy"]},
                                 {AdapterApi: ["adapter_config_policy"]},
                                 {AssetApi: ["asset_device_registration"]},
+                                {AuditdApi: ["auditd_policy"]},
                                 {BiosApi: ["bios_policy"]},
                                 {BootApi: ["boot_precision_policy"]},
                                 {CertificatemanagementApi: ["certificatemanagement_policy"]},
                                 {ChassisApi: ["chassis_profile", "chassis_profile_template"]},
-                                {ComputeApi: ["compute_blade", "compute_rack_unit", "compute_scrub_policy", 
-                                              "compute_server_setting"]},
+                                {ComputeApi: ["compute_blade", "compute_pcie_connectivity_policy", "compute_rack_unit",
+                                              "compute_scrub_policy", "compute_server_setting"]},
                                 {DeviceconnectorApi: ["deviceconnector_policy"]},
                                 {EquipmentApi: ["equipment_chassis", "equipment_fex"]},
                                 {EtherApi: ["ether_physical_port", "ether_port_channel"]},
@@ -144,6 +147,7 @@ class IntersightConfig(GenericConfig):
                                 {NetworkApi: ["network_element"]},
                                 {NtpApi: ["ntp_policy"]},
                                 {OrganizationApi: ["organization_organization"]},
+                                {PoolApi : ["pool_id_mapping_policy"]},
                                 {PowerApi: ["power_policy"]},
                                 {ResourceApi: ["resource_group"]},
                                 {ResourcepoolApi: ["resourcepool_pool", "resourcepool_qualification_policy"]},

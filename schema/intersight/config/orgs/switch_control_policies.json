@@ -23,6 +23,15 @@
          "default": "",
          "pattern": "^[a-zA-Z0-9_.:-]{1,64}$"
       },
+      "target_platform": {
+         "description": "Switch Control Policy Target Platform",
+         "type": "string",
+         "default": "UCS Domain",
+         "enum": [
+            "UCS Domain",
+            "Unified Edge"
+         ]
+      },
       "tags": {
          "description": "Switch Control Policy Tags",
          "type": "array",
@@ -61,6 +70,11 @@
           "description": "If enabled, MACsec keys will be encrypted using type-6 format. If a MACsec key is already in type-6 format, the primary key will be used for decryption.",
           "type": "boolean",
           "default": false
+      },
+      "enable_jumbo_frames": {
+         "description": "To enable or disable Jumbo Frames on the switch (for Unified Edge)",
+         "type": "boolean",
+         "default": true
       },
       "fabric_port_channel_vhba_reset": {
          "description": "Switch Control Policy Fabric Port-Channel vHBA Reset Admin State",
@@ -103,8 +117,8 @@
       "mac_aging_time": {
          "description": "Switch Control Policy MAC Address Table Aging Time (Custom)",
          "type": "integer",
-         "minimum": 1,
-         "maximum": 1000000
+         "minimum": 10,
+         "maximum": 918000
       },
       "switching_mode": {
          "description": "Switch Control Policy Switching Mode",
@@ -159,5 +173,30 @@
    "additionalProperties": false,
    "required": [
       "name"
-   ]
+   ],
+   "if": {
+      "properties": {
+         "target_platform": {
+            "enum": [
+               "Unified Edge"
+            ]
+         }
+      }
+   },
+   "then": {
+      "properties": {
+         "mac_aging_time": {
+            "minimum": 10,
+            "maximum": 630
+         }
+      }
+   },
+   "else": {
+      "properties": {
+         "mac_aging_time": {
+            "minimum": 10,
+            "maximum": 918000
+         }
+      }
+   }
 }

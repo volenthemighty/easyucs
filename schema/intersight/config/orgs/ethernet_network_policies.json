@@ -60,13 +60,25 @@
          "maximum": 4094
       },
       "target_platform": {
-         "description": "Ethernet Network Policy Target Platform",
+         "description": "DEPRECATED: Ethernet Network Policy Target Platform",
          "type": "string",
          "default": "Standalone",
          "enum": [
             "FI-Attached",
             "Standalone"
          ]
+      },
+      "enable_qinq_tunneling": {
+         "description": "Ethernet Network Control Policy Enable QinQ (802.1Q-in-802.1Q) Tunneling on the vNIC",
+         "type": "boolean",
+         "default": false
+      },
+      "qinq_vlan": {
+         "description": "Ethernet Network Policy QinQ VLAN",
+         "type": "integer",
+         "default": 2,
+         "minimum": 2,
+         "maximum": 4093
       },
       "vlan_mode": {
          "description": "Ethernet Network Policy VLAN Mode",
@@ -80,7 +92,6 @@
    },
    "additionalProperties": false,
    "required": [
-      "name",
-      "target_platform"
+      "name"
    ]
 }

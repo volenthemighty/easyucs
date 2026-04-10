@@ -100,7 +100,7 @@
          "description": "SNMP Policy Trap Community String",
          "type": "string",
          "default": "",
-         "maxLength": 18
+         "maxLength": 32
       },
       "trap_destinations": {
          "description": "SNMP Policy Trap Destinations",

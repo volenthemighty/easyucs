@@ -115,7 +115,7 @@ class IntersightConfigManager(GenericConfigManager):
 
     def _get_profiles(self, config_orgs, output_json_orgs):
         """
-        Fetches all the server/chassis/domain profiles from all the orgs
+        Fetches all the server/chassis/domain/unified_edge profiles from all the orgs
         :returns: nothing
         """
         for org in config_orgs:
@@ -196,11 +196,35 @@ class IntersightConfigManager(GenericConfigManager):
                     }
                     json_org["profiles"].append(dict_chassis_profile_template)
 
+            if org.unified_edge_profiles:
+                for unified_edge_profile in org.unified_edge_profiles:
+                    dict_unified_edge_profile = {
+                        "name": getattr(unified_edge_profile, "name", None),
+                        "type": "unified_edge_profile"
+                    }
+                    for field in ["descr", "unified_edge_profile_template"]:
+                        if hasattr(unified_edge_profile, field) and getattr(unified_edge_profile, field):
+                            dict_unified_edge_profile[field] = getattr(unified_edge_profile, field)
+                    if getattr(unified_edge_profile, "operational_state", None):
+                        for field in ["config_state", "profile_state"]:
+                            if unified_edge_profile.operational_state.get(field):
+                                dict_unified_edge_profile[field] = unified_edge_profile.operational_state.get(field)
+                    json_org["profiles"].append(dict_unified_edge_profile)
+
+            if org.unified_edge_profile_templates:
+                for unified_edge_profile_template in org.unified_edge_profile_templates:
+                    dict_unified_edge_profile_template = {
+                        "name": getattr(unified_edge_profile_template, "name", None),
+                        "type": "unified_edge_profile_template"
+                    }
+                    json_org["profiles"].append(dict_unified_edge_profile_template)
+
+
             output_json_orgs.append(json_org)
 
     def get_profiles(self, config=None):
         """
-        List all profiles (server/chassis/domain profiles) from a given config with some of their key attributes
+        List all profiles (server/chassis/domain/unified_edge profiles) from a given config with some of their key attributes
         :param config: The config from which all the profiles/templates need to be obtained
         :return: All profiles/templates from the config, [] otherwise
         """
@@ -278,9 +302,9 @@ class IntersightConfigManager(GenericConfigManager):
                         if org.shared_with_orgs and not force:
                             failed_orgs += org.shared_with_orgs
                             self.logger(level="error",
-                                        message=f"Failed to push the organization(s) {', '.join(org.shared_with_orgs)}. "
-                                                f"As the organization '{org.name}' which is shared to the organization(s) "
-                                                f"have failed to be pushed.")
+                                        message=f"Failed to push the organization(s) {', '.join(org.shared_with_orgs)}"
+                                                f", as the organization '{org.name}' which is shared with it/them "
+                                                f"has failed to be pushed.")
 
                 # Then we push the sharing rules between the orgs
                 for org in config.orgs:
